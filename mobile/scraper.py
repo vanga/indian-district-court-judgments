@@ -51,7 +51,15 @@ warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from archive_manager import S3ArchiveManager, format_size
-from api_client import MobileAPIClient, State, District, CourtComplex, CaseType, Case, Order
+from api_client import (
+    MobileAPIClient,
+    State,
+    District,
+    CourtComplex,
+    CaseType,
+    Case,
+    Order,
+)
 from crypto import decrypt_url_param
 from gs import check_ghostscript_available, compress_pdf_bytes
 
@@ -68,7 +76,7 @@ console_handler = colorlog.StreamHandler()
 console_handler.setFormatter(
     colorlog.ColoredFormatter(
         "%(log_color)s%(asctime)s - %(levelname)s - %(message)s",
-        datefmt='%Y-%m-%d %H:%M:%S',
+        datefmt="%Y-%m-%d %H:%M:%S",
         log_colors={
             "DEBUG": "cyan",
             "INFO": "green",
@@ -96,10 +104,12 @@ MAX_PDF_RETRIES = 3  # Maximum retries for PDF downloads
 @dataclass
 class CaseTypeTask:
     """A task for processing a single case type in a complex."""
+
     case_type_code: str
     case_type_name: str
     year: int
     status: str  # "Pending" or "Disposed"
+
 
 # Check if Ghostscript is available for PDF compression
 COMPRESSION_AVAILABLE = check_ghostscript_available()
@@ -188,7 +198,7 @@ class MobileScraper:
                 logger.warning(f"Attempt {attempt + 1}/{self.max_retries} failed: {e}")
 
             if attempt < self.max_retries - 1:
-                wait_time = (2 ** attempt) + (0.1 * attempt)
+                wait_time = (2**attempt) + (0.1 * attempt)
                 time.sleep(wait_time)
 
         return None
@@ -203,12 +213,16 @@ class MobileScraper:
                         logger.info("API session initialized successfully")
                         return True
                     else:
-                        logger.warning(f"Session init attempt {attempt + 1}/{self.max_retries} returned False")
+                        logger.warning(
+                            f"Session init attempt {attempt + 1}/{self.max_retries} returned False"
+                        )
                 except Exception as e:
-                    logger.warning(f"Session init attempt {attempt + 1}/{self.max_retries} failed: {e}")
+                    logger.warning(
+                        f"Session init attempt {attempt + 1}/{self.max_retries} failed: {e}"
+                    )
 
                 if attempt < self.max_retries - 1:
-                    wait_time = (2 ** attempt) + 1
+                    wait_time = (2**attempt) + 1
                     logger.info(f"Waiting {wait_time}s before retry...")
                     time.sleep(wait_time)
 
@@ -241,6 +255,7 @@ class MobileScraper:
         interim_orders: list,
     ) -> dict:
         """Build metadata dictionary for a case."""
+
         def order_to_dict(o: Order) -> dict:
             data = {
                 "order_number": o.order_number,
@@ -324,7 +339,11 @@ class MobileScraper:
             return True  # Already exists, count as success
 
         # Download PDF with retry
-        temp_path = self.local_dir / "temp" / f"{threading.current_thread().name}_{clean_filename}"
+        temp_path = (
+            self.local_dir
+            / "temp"
+            / f"{threading.current_thread().name}_{clean_filename}"
+        )
         temp_path.parent.mkdir(parents=True, exist_ok=True)
 
         success = False
@@ -342,25 +361,33 @@ class MobileScraper:
                     with open(temp_path, "rb") as f:
                         header = f.read(4)
 
-                    if header == b'%PDF':
+                    if header == b"%PDF":
                         success = True
                         if attempt > 0:
                             self._update_stats(pdfs_retried=1)
-                            logger.debug(f"PDF download succeeded on retry {attempt + 1}: {pdf_filename}")
+                            logger.debug(
+                                f"PDF download succeeded on retry {attempt + 1}: {pdf_filename}"
+                            )
                         break
                     else:
-                        logger.warning(f"Invalid PDF content (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename}")
+                        logger.warning(
+                            f"Invalid PDF content (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename}"
+                        )
                         if temp_path.exists():
                             temp_path.unlink()
                 else:
-                    logger.debug(f"PDF download failed (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename}")
+                    logger.debug(
+                        f"PDF download failed (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename}"
+                    )
 
             except Exception as e:
-                logger.debug(f"PDF download error (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename} - {e}")
+                logger.debug(
+                    f"PDF download error (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename} - {e}"
+                )
 
             if attempt < MAX_PDF_RETRIES - 1:
                 # Exponential backoff
-                wait_time = (2 ** attempt) + (0.5 * attempt)
+                wait_time = (2**attempt) + (0.5 * attempt)
                 time.sleep(wait_time)
 
         if success and temp_path.exists():
@@ -401,7 +428,9 @@ class MobileScraper:
                 pass
             return True
         else:
-            logger.warning(f"Failed to download PDF after {MAX_PDF_RETRIES} attempts: {pdf_filename}")
+            logger.warning(
+                f"Failed to download PDF after {MAX_PDF_RETRIES} attempts: {pdf_filename}"
+            )
             self._update_stats(pdfs_failed=1)
             # Clean up temp file if it exists
             try:
@@ -554,68 +583,113 @@ class MobileScraper:
             logger.warning(f"No case types found for {complex_.name}")
             return 0
 
-        # Generate all tasks (case type + year + status combinations)
-        statuses = ["Pending", "Disposed"] if pending_disposed == "Both" else [pending_disposed]
-        tasks: List[CaseTypeTask] = []
+        # Generate tasks grouped by year
+        statuses = (
+            ["Pending", "Disposed"]
+            if pending_disposed == "Both"
+            else [pending_disposed]
+        )
+        tasks_per_year: dict[int, List[CaseTypeTask]] = {}
+        total_task_count = 0
 
-        for ct in case_types:
-            for year in years:
+        for year in years:
+            year_tasks = []
+            for ct in case_types:
                 for status in statuses:
-                    tasks.append(CaseTypeTask(
-                        case_type_code=ct.code,
-                        case_type_name=ct.name,
-                        year=year,
-                        status=status,
-                    ))
+                    year_tasks.append(
+                        CaseTypeTask(
+                            case_type_code=ct.code,
+                            case_type_name=ct.name,
+                            year=year,
+                            status=status,
+                        )
+                    )
+            tasks_per_year[year] = year_tasks
+            total_task_count += len(year_tasks)
 
         self._update_stats(case_types_processed=len(case_types))
 
-        logger.info(f"    Found {len(case_types)} case types, {len(tasks)} tasks (workers: {self.max_workers})")
+        logger.info(
+            f"    Found {len(case_types)} case types, {total_task_count} tasks across {len(years)} years (workers: {self.max_workers})"
+        )
 
-        # Process tasks concurrently with progress bar
+        # Process tasks year by year, flushing to S3 after each year
         total_processed = 0
         total_found = 0
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            # Submit all tasks
-            future_to_task = {
-                executor.submit(
-                    self._process_case_type_task, task, state, district, complex_
-                ): task
-                for task in tasks
-            }
+        with tqdm(
+            total=total_task_count,
+            desc=f"    {complex_.name[:25]}",
+            unit="task",
+            leave=False,
+            ncols=100,
+        ) as pbar:
+            for year in years:
+                if self._interrupted:
+                    break
 
-            # Process with progress bar
-            with tqdm(
-                total=len(tasks),
-                desc=f"    {complex_.name[:25]}",
-                unit="task",
-                leave=False,
-                ncols=100,
-            ) as pbar:
-                for future in concurrent.futures.as_completed(future_to_task):
-                    task = future_to_task[future]
-                    try:
-                        found, processed = future.result()
-                        total_found += found
-                        total_processed += processed
-                        if found > 0:
-                            pbar.set_postfix({
-                                "found": total_found,
-                                "processed": total_processed,
-                            })
-                    except Exception as e:
-                        logger.debug(f"Task failed ({task.case_type_name}/{task.year}/{task.status}): {e}")
-                        self._update_stats(errors=1)
-                    finally:
-                        pbar.update(1)
+                year_tasks = tasks_per_year[year]
+                year_found = 0
+                year_processed = 0
 
-                    if self._interrupted:
-                        logger.info("Stopping due to interrupt - cancelling remaining tasks...")
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        break
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=self.max_workers
+                ) as executor:
+                    # Submit all tasks for this year
+                    future_to_task = {
+                        executor.submit(
+                            self._process_case_type_task,
+                            task,
+                            state,
+                            district,
+                            complex_,
+                        ): task
+                        for task in year_tasks
+                    }
 
-        logger.info(f"    Complex done: {total_found} cases found, {total_processed} processed")
+                    for future in concurrent.futures.as_completed(future_to_task):
+                        task = future_to_task[future]
+                        try:
+                            found, processed = future.result()
+                            year_found += found
+                            year_processed += processed
+                            total_found += found
+                            total_processed += processed
+                            if found > 0:
+                                pbar.set_postfix(
+                                    {
+                                        "found": total_found,
+                                        "processed": total_processed,
+                                        "year": year,
+                                    }
+                                )
+                        except Exception as e:
+                            logger.debug(
+                                f"Task failed ({task.case_type_name}/{task.year}/{task.status}): {e}"
+                            )
+                            self._update_stats(errors=1)
+                        finally:
+                            pbar.update(1)
+
+                        if self._interrupted:
+                            logger.info(
+                                "Stopping due to interrupt - cancelling remaining tasks..."
+                            )
+                            executor.shutdown(wait=False, cancel_futures=True)
+                            break
+
+                # Flush archives for this year+complex to S3
+                if self.archive_manager and (year_found > 0 or year_processed > 0):
+                    self.archive_manager.flush_complex_year(
+                        year=year,
+                        state_code=str(state.code),
+                        district_code=str(district.code),
+                        complex_code=str(complex_.code),
+                    )
+
+        logger.info(
+            f"    Complex done: {total_found} cases found, {total_processed} processed"
+        )
         return total_processed
 
     def scrape(
@@ -754,7 +828,9 @@ class MobileScraper:
                         if self._interrupted:
                             break
 
-                        complexes_pbar.set_description(f"    Complex: {complex_.name[:16]}")
+                        complexes_pbar.set_description(
+                            f"    Complex: {complex_.name[:16]}"
+                        )
                         self._update_stats(complexes_processed=1)
 
                         try:
@@ -765,20 +841,24 @@ class MobileScraper:
                                 years=years,
                                 pending_disposed=pending_disposed,
                             )
-                            # Flush archives to S3 after each complex is done
-                            # This ensures data is uploaded incrementally rather than at the end
+                            # Flushing now happens inside scrape_complex after each year completes.
+                            # Flush any remaining archives for this complex (e.g. from interrupt or edge cases).
                             self.archive_manager.flush_complex(
                                 state_code=str(state.code),
                                 district_code=str(district.code),
                                 complex_code=str(complex_.code),
                             )
                             # Update postfix with current stats
-                            complexes_pbar.set_postfix({
-                                "cases": self.stats["cases_processed"],
-                                "pdfs": self.stats["pdfs_downloaded"],
-                            })
+                            complexes_pbar.set_postfix(
+                                {
+                                    "cases": self.stats["cases_processed"],
+                                    "pdfs": self.stats["pdfs_downloaded"],
+                                }
+                            )
                         except Exception as e:
-                            logger.error(f"Error processing complex {complex_.name}: {e}")
+                            logger.error(
+                                f"Error processing complex {complex_.name}: {e}"
+                            )
                             self._update_stats(errors=1)
 
                     complexes_pbar.close()
@@ -808,11 +888,11 @@ class MobileScraper:
         print(f"Cases processed:      {self.stats['cases_processed']}")
         print(f"Cases skipped:        {self.stats['cases_skipped']}")
         print(f"PDFs downloaded:      {self.stats['pdfs_downloaded']}")
-        if self.stats['pdfs_retried'] > 0:
+        if self.stats["pdfs_retried"] > 0:
             print(f"PDFs retried:         {self.stats['pdfs_retried']}")
         if self.compress_pdfs:
             print(f"PDFs compressed:      {self.stats['pdfs_compressed']}")
-            saved_mb = self.stats['bytes_saved'] / (1024 * 1024)
+            saved_mb = self.stats["bytes_saved"] / (1024 * 1024)
             print(f"Space saved:          {saved_mb:.2f} MB")
         print(f"PDFs failed:          {self.stats['pdfs_failed']}")
         print(f"Errors:               {self.stats['errors']}")

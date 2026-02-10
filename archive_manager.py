@@ -258,7 +258,12 @@ class S3ArchiveManager:
                     f"Finalizing archive (local only): {archive_type} for {year}/{state_code}/{district_code}/{complex_code}"
                 )
                 self._finalize_current_part(
-                    year, state_code, district_code, complex_code, archive_type, upload=False
+                    year,
+                    state_code,
+                    district_code,
+                    complex_code,
+                    archive_type,
+                    upload=False,
                 )
             return
 
@@ -321,7 +326,9 @@ class S3ArchiveManager:
         """Load index file from S3 (or local filesystem in local_only mode), returning empty index if not found"""
         # In local_only mode, try to load from local filesystem
         if self.local_only:
-            local_dir = self._get_local_dir(year, state_code, district_code, complex_code)
+            local_dir = self._get_local_dir(
+                year, state_code, district_code, complex_code
+            )
             index_name = f"{archive_type}.index.json"
             local_index_path = local_dir / index_name
 
@@ -335,7 +342,9 @@ class S3ArchiveManager:
                     index.district_code = district_code
                     index.complex_code = complex_code
                     index.archive_type = archive_type
-                    logger.debug(f"Loaded local index: {local_index_path} ({index.file_count} files)")
+                    logger.debug(
+                        f"Loaded local index: {local_index_path} ({index.file_count} files)"
+                    )
                     return index
                 except (json.JSONDecodeError, IOError) as e:
                     logger.warning(f"Error loading local index {local_index_path}: {e}")
@@ -357,7 +366,9 @@ class S3ArchiveManager:
                 files=[],
             )
 
-        s3_dir = self._get_s3_dir(year, state_code, district_code, complex_code, archive_type)
+        s3_dir = self._get_s3_dir(
+            year, state_code, district_code, complex_code, archive_type
+        )
         index_key = f"{s3_dir}{archive_type}.index.json"
 
         try:
@@ -423,7 +434,9 @@ class S3ArchiveManager:
         if self.local_only:
             return None
 
-        s3_dir = self._get_s3_dir(year, state_code, district_code, complex_code, archive_type)
+        s3_dir = self._get_s3_dir(
+            year, state_code, district_code, complex_code, archive_type
+        )
         ext = self._get_archive_extension(archive_type)
         archive_name = f"{archive_type}{ext}"
         s3_key = f"{s3_dir}{archive_name}"
@@ -479,7 +492,9 @@ class S3ArchiveManager:
             index = self.indexes[key]
 
             # Determine if we should try to work with the main archive
-            main_archive_name = f"{archive_type}{self._get_archive_extension(archive_type)}"
+            main_archive_name = (
+                f"{archive_type}{self._get_archive_extension(archive_type)}"
+            )
             has_main_in_index = any(
                 part.name == main_archive_name for part in index.parts
             )
@@ -499,7 +514,12 @@ class S3ArchiveManager:
                         f"Main archive {local_path.name} already at size limit ({format_size(existing_size)}), creating new part"
                     )
                     return self._create_new_part(
-                        year, state_code, district_code, complex_code, archive_type, is_first=False
+                        year,
+                        state_code,
+                        district_code,
+                        complex_code,
+                        archive_type,
+                        is_first=False,
                     )
 
                 # Open existing archive for appending
@@ -516,7 +536,12 @@ class S3ArchiveManager:
                 # Create new archive
                 is_first = len(index.parts) == 0
                 return self._create_new_part(
-                    year, state_code, district_code, complex_code, archive_type, is_first=is_first
+                    year,
+                    state_code,
+                    district_code,
+                    complex_code,
+                    archive_type,
+                    is_first=is_first,
                 )
 
             return self.archives[key]
@@ -545,6 +570,7 @@ class S3ArchiveManager:
             logger.info(f"Creating first archive part: {archive_name}")
         else:
             import time
+
             time.sleep(0.01)
             now_iso = ist_now_iso()
             ts = datetime.fromisoformat(now_iso.replace("Z", "+00:00")).strftime(
@@ -592,7 +618,7 @@ class S3ArchiveManager:
 
         # Ensure all data is flushed to disk before any operations
         # This prevents truncated archives when copying or uploading
-        with open(local_path, 'rb') as f:
+        with open(local_path, "rb") as f:
             os.fsync(f.fileno())
 
         # Record this part info
@@ -681,7 +707,9 @@ class S3ArchiveManager:
     ):
         """Upload a single part to S3 and update the index"""
         key = (year, state_code, district_code, complex_code, archive_type)
-        s3_dir = self._get_s3_dir(year, state_code, district_code, complex_code, archive_type)
+        s3_dir = self._get_s3_dir(
+            year, state_code, district_code, complex_code, archive_type
+        )
         local_path = Path(part_info["local_path"])
 
         if not local_path.exists():
@@ -718,7 +746,9 @@ class S3ArchiveManager:
         index.add_part(new_part)
 
         # Upload updated index
-        self._upload_index(year, state_code, district_code, complex_code, archive_type, index)
+        self._upload_index(
+            year, state_code, district_code, complex_code, archive_type, index
+        )
         logger.info(f"\x1b[32m✓ Updated index for {archive_type}\x1b[0m")
 
         # Delete local file after successful upload
@@ -774,7 +804,7 @@ class S3ArchiveManager:
             archive.addfile(info, io.BytesIO(data))
 
             # Flush to disk to prevent data loss on crash
-            if hasattr(archive, 'fileobj') and archive.fileobj:
+            if hasattr(archive, "fileobj") and archive.fileobj:
                 archive.fileobj.flush()
 
             # Track this file
@@ -824,7 +854,9 @@ class S3ArchiveManager:
         index: IndexFileV2,
     ):
         """Upload the index file to S3"""
-        s3_dir = self._get_s3_dir(year, state_code, district_code, complex_code, archive_type)
+        s3_dir = self._get_s3_dir(
+            year, state_code, district_code, complex_code, archive_type
+        )
         index_name = f"{archive_type}.index.json"
         index_s3_key = f"{s3_dir}{index_name}"
 
@@ -880,7 +912,9 @@ class S3ArchiveManager:
     ) -> int:
         """Upload all parts for a given key and update index"""
         key = (year, state_code, district_code, complex_code, archive_type)
-        s3_dir = self._get_s3_dir(year, state_code, district_code, complex_code, archive_type)
+        s3_dir = self._get_s3_dir(
+            year, state_code, district_code, complex_code, archive_type
+        )
 
         # Get or create index
         if key not in self.indexes:
@@ -922,7 +956,9 @@ class S3ArchiveManager:
             uploaded_count += 1
 
         # Upload updated index
-        self._upload_index(year, state_code, district_code, complex_code, archive_type, index)
+        self._upload_index(
+            year, state_code, district_code, complex_code, archive_type, index
+        )
 
         # Clear pending parts
         self.pending_parts[key] = []
@@ -946,8 +982,11 @@ class S3ArchiveManager:
 
         # Find all keys matching this complex
         keys_to_flush = [
-            key for key in list(self.archives.keys())
-            if key[1] == state_code and key[2] == district_code and key[3] == complex_code
+            key
+            for key in list(self.archives.keys())
+            if key[1] == state_code
+            and key[2] == district_code
+            and key[3] == complex_code
         ]
 
         for key in keys_to_flush:
@@ -958,14 +997,53 @@ class S3ArchiveManager:
                     year, sc, dc, cc, archive_type, upload=False
                 )
             else:
-                self._finalize_current_part(
-                    year, sc, dc, cc, archive_type, upload=True
-                )
+                self._finalize_current_part(year, sc, dc, cc, archive_type, upload=True)
             flushed_count += 1
 
         if flushed_count > 0:
             logger.info(
                 f"Flushed {flushed_count} archives for {state_code}/{district_code}/{complex_code}"
+            )
+
+        return flushed_count
+
+    def flush_complex_year(
+        self,
+        year: int,
+        state_code: str,
+        district_code: str,
+        complex_code: str,
+    ):
+        """
+        Flush and upload all archives for a specific complex and year.
+
+        This should be called after processing all case types for a single year
+        within a complex to ensure data is uploaded incrementally.
+        """
+        flushed_count = 0
+
+        # Find all keys matching this complex and year
+        keys_to_flush = [
+            key
+            for key in list(self.archives.keys())
+            if key[0] == year
+            and key[1] == state_code
+            and key[2] == district_code
+            and key[3] == complex_code
+        ]
+
+        for key in keys_to_flush:
+            yr, sc, dc, cc, archive_type = key
+
+            if self.local_only:
+                self._finalize_current_part(yr, sc, dc, cc, archive_type, upload=False)
+            else:
+                self._finalize_current_part(yr, sc, dc, cc, archive_type, upload=True)
+            flushed_count += 1
+
+        if flushed_count > 0:
+            logger.info(
+                f"Flushed {flushed_count} archives for year={year} {state_code}/{district_code}/{complex_code}"
             )
 
         return flushed_count
@@ -980,12 +1058,18 @@ class S3ArchiveManager:
                         for district_dir in state_dir.glob("*"):
                             if district_dir.is_dir():
                                 for complex_dir in district_dir.glob("*"):
-                                    if complex_dir.is_dir() and not any(complex_dir.iterdir()):
+                                    if complex_dir.is_dir() and not any(
+                                        complex_dir.iterdir()
+                                    ):
                                         complex_dir.rmdir()
-                                        logger.debug(f"Removed empty directory: {complex_dir}")
+                                        logger.debug(
+                                            f"Removed empty directory: {complex_dir}"
+                                        )
                                 if not any(district_dir.iterdir()):
                                     district_dir.rmdir()
-                                    logger.debug(f"Removed empty directory: {district_dir}")
+                                    logger.debug(
+                                        f"Removed empty directory: {district_dir}"
+                                    )
                         if not any(state_dir.iterdir()):
                             state_dir.rmdir()
                             logger.debug(f"Removed empty directory: {state_dir}")

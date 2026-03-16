@@ -1,0 +1,26 @@
+HTTP/1.1 200 OK
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Frame-Options: SAMEORIGIN
+X-Xss-Protection: 1; mode=block
+Date: Sun, 25 Jan 2026 06:40:04 GMT
+Server: 
+X-Powered-By: PHP/8.0.12
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Allow-Headers: x-requested-with, Content-Type, origin, Authorization, accept, client-security-token
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Set-Cookie: APP_SESSID=mad97ciu3jrvqjibdeleqpek2a; path=/ecourt_mobile_encrypted; secure; HttpOnly; SameSite=Strict
+X-Content-Type-Options: nosniff
+Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; object-src 'none'
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Referrer-Policy: strict-origin
+Expect-CT: max-age=3600, enforce
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+Content-Length: 462
+
+
+93cb4a268415155de60b00e6cb8b3eb0jdpx59MGCqqsEt/9QfVItTkdnQbvOzaWALvybdRaJtR/fMg/me5Ey0pzDmeOv3h+43lHoOiCpNlo6oFz8YqpJKvJNE0ZVe4KJMgfKxpVJ/HBE7qkhYShG+6xAG+O/sju50cxj1AqHZuiZQLk38PxVssCprQnJrUncSs/pnD7tXFPzPHLfq/NJGHHg5wsla9Aj9kIr8BJAtxcxEL2wTEqx5nb4lPyUMtAloMgQ47Bnli1QXTnPmxf0Aic29C+qxXMdZEQTUdBlsUwvzpf4ARLGX69bbt16IyZB8uDqC26r1WT12B9i7RlmvKdt0H1IA44Dc67+b4iYRsU6DP0/s9rCOF3yHS0Medb1Rukp4J14hTsdHr0a/4Rv0Obkb8/uVs8DHodrBCYyMYbxPrmabUK1M8nSZvkk+rGZO4sdumrhbg=

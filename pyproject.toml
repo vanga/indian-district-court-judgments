@@ -1,0 +1,29 @@
+[project]
+name = "indian-district-court-judgments-test"
+version = "0.1.0"
+description = "Scraper for Indian District Court judgments from services.ecourts.gov.in"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "beautifulsoup4>=4.13",
+    "boto3>=1.40",
+    "colorlog>=6.9",
+    "lxml>=6.0",
+    "onnx>=1.18",
+    "onnxruntime>=1.22",
+    "pandas>=2.3",
+    "pillow>=11.2",
+    "pyarrow>=21.0",
+    "requests>=2.32",
+    "tokenizers>=0.21",
+    "torch>=2.7",
+    "torchvision>=0.22",
+    "tqdm>=4.67",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12",
+]
+
+[tool.ruff]

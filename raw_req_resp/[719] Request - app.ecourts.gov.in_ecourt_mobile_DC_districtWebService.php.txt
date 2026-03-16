@@ -1,0 +1,9 @@
+GET /ecourt_mobile_DC/districtWebService.php?params=a8b0b7f363d7c6555NdXBN%2BHfMQLbKGzei9JwyxJ%2BhytmipuFLQpuR3Mj0%2FtpPUKpDiKHAHpJ%2FLPp00wX HTTP/1.1
+Accept-Charset: UTF-8
+Cookie: JSESSION=37538899
+Authorization: Bearer 49597226654268e14Az9H/HVyEEnUhNZl2YxTT8xmJvKLZN3TlwvsNeWuQrtTcvWQtwNftH/4b7ls82jvkCNtzXFefuLv7OIUKsPKKcZSDIALekEI8CsGlG0nqE3UvbF3pt5eL7PioCderM0jten1RgHVR7BYWDC2xwd8JZeGoFr43tgWv+hcKrdHYIwqXpuhR8zgPhCFIwu+DO3YSte0b29z2Co7hpre+6H+VRdQClheyn7aTgyW9vjIHK6nhUxGTh8w91gQxrMvkFKrryutgURSryj04+Or5Q5XvDffiZtWEkKPrIq6BANhWZndyeKLOlLUXyWiLglYV2AwSNdEZjh+D6X7ygPY/R5y6w9WGPc0mpW31hwrX4yIH1sLuxmPNU89b282th0CEa8zmpjF4zZIuViGnMR+VD3Dmr6+BnWQMJMfPCZQ277c/Nt1qFPUlfQTWNzWyk6AJS+0EoNn7uCkulYBdSf7Dcb8Er1Ji1BHOWBl3BGVxpbPOi9WWvXPVbQ1hvSLpMZXPsLBC8j2SbC7/GIWIzNOxZrSzQ==
+User-Agent: Dalvik/2.1.0 (Linux; U; Android 14; SM-X205 Build/UP1A.231005.007)
+Host: app.ecourts.gov.in
+Connection: Keep-Alive
+Accept-Encoding: gzip
+

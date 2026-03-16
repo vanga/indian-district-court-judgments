@@ -1,0 +1,525 @@
+openapi: 3.0.0
+info:
+  title: HarToOpenApi
+  version: 1.0.0
+  description: >-
+    OpenAPI spec generated from HAR data for app.ecourts.gov.in on
+    2026-01-20T20:32:21.046Z
+paths:
+  /ecourt_mobile_DC/appReleaseWebService.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcAppReleaseWebServicePhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              a705f4f63b82c24747qPE/FpOwcPJjKVjd/uSgN3RxPO8Ykz8CU47k4f8z0qkFwkpn0Cp3f3/1drsdqVSC2ZuUTCxp8GMZTexZutqkNee9zgJ1QX+NQZaaTcJIkU=
+            example: >-
+              a705f4f63b82c24747qPE/FpOwcPJjKVjd/uSgN3RxPO8Ykz8CU47k4f8z0qkFwkpn0Cp3f3/1drsdqVSC2ZuUTCxp8GMZTexZutqkNee9zgJ1QX+NQZaaTcJIkU=
+            type: string
+        - description: Cookie
+          in: header
+          name: Cookie
+          schema:
+            default: JSESSION=81500815
+            example: JSESSION=81500815
+            type: string
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+      security:
+        - Cookie: []
+      summary: Get Ecourt Mobile DC App Release Web Service Php
+    parameters: []
+  /ecourt_mobile_DC/caseHistoryWebService.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcCaseHistoryWebServicePhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              c51284740281448b4B0ONals4Sxsorsvbpl7U6RTw8rs9Ce/HakrjL3AnApOdJ2utHdZTHPe649bMu0X8zz/O2ezKnadSE0vkhlPuGRtK+yhQ2X9jkcAHjl8byrV42r0muJiLrChi0tGu1r8Tcnrnk8qat6tFPUi6dU9EldvnxOKYhGiDZt4FUrnH0tSuQmg0dLG/3GwPFjfwuJfK
+            example: >-
+              c51284740281448b4B0ONals4Sxsorsvbpl7U6RTw8rs9Ce/HakrjL3AnApOdJ2utHdZTHPe649bMu0X8zz/O2ezKnadSE0vkhlPuGRtK+yhQ2X9jkcAHjl8byrV42r0muJiLrChi0tGu1r8Tcnrnk8qat6tFPUi6dU9EldvnxOKYhGiDZt4FUrnH0tSuQmg0dLG/3GwPFjfwuJfK
+            type: string
+        - description: Cookie
+          in: header
+          name: Cookie
+          schema:
+            default: JSESSION=81500815
+            example: JSESSION=81500815
+            type: string
+        - description: Authorization
+          in: header
+          name: Authorization
+          schema:
+            default: >-
+              Bearer
+              ed2b4058d38286624Epm9tbhDFw/hY9U17d3JqAxkUnQR33/Ce+qjdSjRvVXGX38AfMwX1SsfHqVk6G0eZKvUdQaZrCYWkv/wHRoz2Xk9H9njUxiIrWC4tMkdF+6RtPmJBcitF0aKncM2nDyOjwzYn/CXa+EVzjIz1PRvS2rLXyQ/Asvbvi6clxmu1zLMnyjgnLj3y2ffYyyRe18MQL9e4GRR8H8YEm0irFW81nAWvG3yefQXk5DTOF6x3FYV4of4U8srIVRhFeJF8N9lyZjxqnj4nWLnB/T/SgxesYivKMfz9bAdhwwHdsOsJ5JfjqKi5fKgIOorHEMedgDnYRUk/7zyUXpiTrGlFqyJPwl7d9UoZSYqSwGsi4ZbOxpmxAEKdTj//JToyJsTNeadbVFkA9Bz1vI2LFXp17MQpFaoDtN0XkWwoHTYWtf+Rk9THuzixx97yja+pu1NPUeXCadUsvUt7PyjzDiuaF6I+x4La+/IUMRLbaRGlOPZizzrHT/mkw+bU02VwHHbsnmbEiiw5B/qdTH8dNMGKvi8zw==
+            example: >-
+              Bearer
+              ed2b4058d38286624Epm9tbhDFw/hY9U17d3JqAxkUnQR33/Ce+qjdSjRvVXGX38AfMwX1SsfHqVk6G0eZKvUdQaZrCYWkv/wHRoz2Xk9H9njUxiIrWC4tMkdF+6RtPmJBcitF0aKncM2nDyOjwzYn/CXa+EVzjIz1PRvS2rLXyQ/Asvbvi6clxmu1zLMnyjgnLj3y2ffYyyRe18MQL9e4GRR8H8YEm0irFW81nAWvG3yefQXk5DTOF6x3FYV4of4U8srIVRhFeJF8N9lyZjxqnj4nWLnB/T/SgxesYivKMfz9bAdhwwHdsOsJ5JfjqKi5fKgIOorHEMedgDnYRUk/7zyUXpiTrGlFqyJPwl7d9UoZSYqSwGsi4ZbOxpmxAEKdTj//JToyJsTNeadbVFkA9Bz1vI2LFXp17MQpFaoDtN0XkWwoHTYWtf+Rk9THuzixx97yja+pu1NPUeXCadUsvUt7PyjzDiuaF6I+x4La+/IUMRLbaRGlOPZizzrHT/mkw+bU02VwHHbsnmbEiiw5B/qdTH8dNMGKvi8zw==
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+      security:
+        - Authorization: []
+          Cookie: []
+      summary: Get Ecourt Mobile DC Case History Web Service Php
+    parameters: []
+  /ecourt_mobile_DC/caseNumberWebService.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcCaseNumberWebServicePhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              60676d124aebe22b2mAdGHdUSeyjMFBDcKUqs4QiiEKo9Ths3bdzJgl9ImQZX8C1CcGACN0hhBh89Bv5Ie7DmY1d+KvrOy9oppwE+WyWXgZJ0KxIrSQHeR56x5how+YmO+n/rvAj70kjYFrBkAre9GkmiWLiOI3pgbtGbBA==
+            example: >-
+              60676d124aebe22b2mAdGHdUSeyjMFBDcKUqs4QiiEKo9Ths3bdzJgl9ImQZX8C1CcGACN0hhBh89Bv5Ie7DmY1d+KvrOy9oppwE+WyWXgZJ0KxIrSQHeR56x5how+YmO+n/rvAj70kjYFrBkAre9GkmiWLiOI3pgbtGbBA==
+            type: string
+        - description: Cookie
+          in: header
+          name: Cookie
+          schema:
+            default: JSESSION=81500815
+            example: JSESSION=81500815
+            type: string
+        - description: Authorization
+          in: header
+          name: Authorization
+          schema:
+            default: >-
+              Bearer
+              7f452ecaba7931624hQ4+wouBaDFN5PJ6QBaijLANAy5WaKj13OX+ae5HLY7eUuHky0plg2IXI+QzlUmDVPTm8HzN+Vu4hzgc8s3E0gmq9bc7nYYWtTVsKN1pFce5KOkpasftEWm3vN328rQjS1UaefXI1/d8XaHz6ikVLwB15/ZRbhbykmm4azM6uiTDo3jsBSal7tlp0B4NrVK0sb7DF2+gZLZnULWReTkTnWA1Jy2CvwxqcXvAHrsqZfG31qkqE92+fA2m0R2VWDHTDnvGJlwqwY5121j0Wx/roRKiQxwzQBLPUU6q2O7SdpfepK8BBMM3EO9rf6bbQ6y+mqZqfPe70NsxRtp7LYHH6XY5dydIEC7lJDeFZxvMlgJ72aQ4q7ad0UmMLhM+9Aqn3/yMTWybfseZ4AWg81B8RhpwoB835Vl2s29zWcmZeXdg6lwMCLr5aU6GnIXJlS9FePebAXrE4RczktvZ5KbWBQvSY0zLTNCYZm7gp1bN7jQE2tkkA59DFlb1vRuu6Q+2uesXSsvao8PClVDM85mRpA==
+            example: >-
+              Bearer
+              7f452ecaba7931624hQ4+wouBaDFN5PJ6QBaijLANAy5WaKj13OX+ae5HLY7eUuHky0plg2IXI+QzlUmDVPTm8HzN+Vu4hzgc8s3E0gmq9bc7nYYWtTVsKN1pFce5KOkpasftEWm3vN328rQjS1UaefXI1/d8XaHz6ikVLwB15/ZRbhbykmm4azM6uiTDo3jsBSal7tlp0B4NrVK0sb7DF2+gZLZnULWReTkTnWA1Jy2CvwxqcXvAHrsqZfG31qkqE92+fA2m0R2VWDHTDnvGJlwqwY5121j0Wx/roRKiQxwzQBLPUU6q2O7SdpfepK8BBMM3EO9rf6bbQ6y+mqZqfPe70NsxRtp7LYHH6XY5dydIEC7lJDeFZxvMlgJ72aQ4q7ad0UmMLhM+9Aqn3/yMTWybfseZ4AWg81B8RhpwoB835Vl2s29zWcmZeXdg6lwMCLr5aU6GnIXJlS9FePebAXrE4RczktvZ5KbWBQvSY0zLTNCYZm7gp1bN7jQE2tkkA59DFlb1vRuu6Q+2uesXSsvao8PClVDM85mRpA==
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+      security:
+        - Authorization: []
+          Cookie: []
+      summary: Get Ecourt Mobile DC Case Number Web Service Php
+    parameters: []
+  /ecourt_mobile_DC/courtEstWebService.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcCourtEstWebServicePhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              c2f34d38699f4d791pjOWmHGbA4+H4TtqzhCsxSCwrDEI69I0kjiHizJ8xK+m3J5AiYTSYcaZT/n4Z6wKRGxrtczM9Ni/ZAI3b/Ar/m7S1jwmpTaA0odLuFE2mGI=
+            example: >-
+              c2f34d38699f4d791pjOWmHGbA4+H4TtqzhCsxSCwrDEI69I0kjiHizJ8xK+m3J5AiYTSYcaZT/n4Z6wKRGxrtczM9Ni/ZAI3b/Ar/m7S1jwmpTaA0odLuFE2mGI=
+            type: string
+        - description: Cookie
+          in: header
+          name: Cookie
+          schema:
+            default: JSESSION=81500815
+            example: JSESSION=81500815
+            type: string
+        - description: Authorization
+          in: header
+          name: Authorization
+          schema:
+            default: >-
+              Bearer
+              306ba395219f3ff848TDfeeQYPdnCTr6CDU7xpxziMBzaSsP2TKve6FD3NJDgz9GPhBPhWqTTboNpc9Zrqkf87E14MO+Ig5/ENYQPIPRJ9So5B/TWgEobhBKsmcCcu24uThusAW3ySxq6GW9+6BHcXG8tGDzpZl11++IXRC6E3K7WIyw5vRbIBnoufB/eLBFpatDkRds5nYAz9McX+z6oe6L2e/JaKxV8OF+f3DRfWyuhhequSbvCItwnjwkMayF8Z7eGG++vUULQVBvxKGdzk/0E+uYNxJuj1wZTiJpRfDCxYluW1dOOMuni6yb1Hyr+LgxDZAJ87Dw6z2uqBUfBP3WuFF+OsmoqPauTSnOiu4rttXuUR7lgYuFF52AgBNe8EV1Xw36tmfgHa5ak4n4OngKR/INzY2Mib5HbgXmPk5I1mma/L2l0Fj/60aKnwEG+NZJbf3vRb6drQygvlqytFzoyt+q+yWnZkBZgx69ixEk4Qo2gt891hnY/MwUUdqhunb7tGIZOR4xHf++FZYPRG6uJHcqnXIqrULjtEA==
+            example: >-
+              Bearer
+              306ba395219f3ff848TDfeeQYPdnCTr6CDU7xpxziMBzaSsP2TKve6FD3NJDgz9GPhBPhWqTTboNpc9Zrqkf87E14MO+Ig5/ENYQPIPRJ9So5B/TWgEobhBKsmcCcu24uThusAW3ySxq6GW9+6BHcXG8tGDzpZl11++IXRC6E3K7WIyw5vRbIBnoufB/eLBFpatDkRds5nYAz9McX+z6oe6L2e/JaKxV8OF+f3DRfWyuhhequSbvCItwnjwkMayF8Z7eGG++vUULQVBvxKGdzk/0E+uYNxJuj1wZTiJpRfDCxYluW1dOOMuni6yb1Hyr+LgxDZAJ87Dw6z2uqBUfBP3WuFF+OsmoqPauTSnOiu4rttXuUR7lgYuFF52AgBNe8EV1Xw36tmfgHa5ak4n4OngKR/INzY2Mib5HbgXmPk5I1mma/L2l0Fj/60aKnwEG+NZJbf3vRb6drQygvlqytFzoyt+q+yWnZkBZgx69ixEk4Qo2gt891hnY/MwUUdqhunb7tGIZOR4xHf++FZYPRG6uJHcqnXIqrULjtEA==
+            type: string
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+      security:
+        - Authorization: []
+          Cookie: []
+      summary: Get Ecourt Mobile DC Court Est Web Service Php
+    parameters: []
+  /ecourt_mobile_DC/courtNameWebService.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcCourtNameWebServicePhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              4a1066dece7849c11QfLh05eO7tUWg41azOCsr+hegdW2Of/JxHI/CGYacznbOxTKrenT1NBVbizeCCueLMFOOc5GSwTbj8+tKPVcd+86eqXFOu8isrgGskib7wVWevwcxR/D2jGEG23j7HUGFEWPtewV7VXmQxl/PpATWw==
+            example: >-
+              4a1066dece7849c11QfLh05eO7tUWg41azOCsr+hegdW2Of/JxHI/CGYacznbOxTKrenT1NBVbizeCCueLMFOOc5GSwTbj8+tKPVcd+86eqXFOu8isrgGskib7wVWevwcxR/D2jGEG23j7HUGFEWPtewV7VXmQxl/PpATWw==
+            type: string
+        - description: Cookie
+          in: header
+          name: Cookie
+          schema:
+            default: JSESSION=81500815
+            example: JSESSION=81500815
+            type: string
+        - description: Authorization
+          in: header
+          name: Authorization
+          schema:
+            default: >-
+              Bearer
+              502200a9187a3b544s9KQorP2gAmK7rmfwrIfTWBzFlD2AMNAUX34S3dDV38bnBpAcXzj4Q3vQomFE3ewHTPMOjZ+EoQz4/M0J/qrWooyIdpuwisyJ3IsHybdWMi5VHko4cqJEcjkr4CQF1w5fp1GmC7kPilb5owffQ6jjO6JNi7Cr4vQ1cQVmIH7mTt0M+HRAUWM1fTX//GttoLP/hegyhe927Xhg/hB2CDERE+fEgIi9VhYxYgENiLYZ3YahKFfxuNaQtYcSBRbgK6okh1NeXK4gb7bZK5HT3hS0pReI7uNhKcskUBNLvOoIGV4TjYXRNNXKsWqyqI/HqGACQXS3DQXqySxQN1nUhDRdAI2V9bWRV2C9dcVofBwaIo781bRPC3I7miOGkRucbkBGasfRI35yI92cGb+R8kdu6zSLJu6HxYc3GBYm13V8aHk4kFUVFNMXE+INNkEo7UMRGJ8O0zAm2KdIun+cxc7br8QlHs/jU75LACq8qC5+s2tvj/Ymc4NJXc5q2vP/X0dNtTaytZdTF/4/dhkK0GvbQ==
+            example: >-
+              Bearer
+              502200a9187a3b544s9KQorP2gAmK7rmfwrIfTWBzFlD2AMNAUX34S3dDV38bnBpAcXzj4Q3vQomFE3ewHTPMOjZ+EoQz4/M0J/qrWooyIdpuwisyJ3IsHybdWMi5VHko4cqJEcjkr4CQF1w5fp1GmC7kPilb5owffQ6jjO6JNi7Cr4vQ1cQVmIH7mTt0M+HRAUWM1fTX//GttoLP/hegyhe927Xhg/hB2CDERE+fEgIi9VhYxYgENiLYZ3YahKFfxuNaQtYcSBRbgK6okh1NeXK4gb7bZK5HT3hS0pReI7uNhKcskUBNLvOoIGV4TjYXRNNXKsWqyqI/HqGACQXS3DQXqySxQN1nUhDRdAI2V9bWRV2C9dcVofBwaIo781bRPC3I7miOGkRucbkBGasfRI35yI92cGb+R8kdu6zSLJu6HxYc3GBYm13V8aHk4kFUVFNMXE+INNkEo7UMRGJ8O0zAm2KdIun+cxc7br8QlHs/jU75LACq8qC5+s2tvj/Ymc4NJXc5q2vP/X0dNtTaytZdTF/4/dhkK0GvbQ==
+            type: string
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+      security:
+        - Authorization: []
+          Cookie: []
+      summary: Get Ecourt Mobile DC Court Name Web Service Php
+    parameters: []
+  /ecourt_mobile_DC/display_pdf.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcDisplayPdfPhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              e506cd26fa1d8322de04800e4ae2f652hAJ9Q5ijXuZ9pF2KfaBjPq7Izp7/rlu4kOjIneK+85n3g/Mwn5T3fpvwpHJVNabo874YDqn/8iElOX41loTVRCQRasbCs/OO9E0yackp3NaUAUeR+xxk4Ej8iR4sKHBpJ4rOlXplFukIZxUZYboLcaUV1Ub1Jfhj1bqQWJULiD7NPmuO0ax/1PPUctWbG0xfquFzpR+xssgBt1+HhnZXz0lCoSlYNKVNyqoOQlGX/NFRkgkzJgWq0vxqCHykBsAu
+            example: >-
+              e506cd26fa1d8322de04800e4ae2f652hAJ9Q5ijXuZ9pF2KfaBjPq7Izp7/rlu4kOjIneK+85n3g/Mwn5T3fpvwpHJVNabo874YDqn/8iElOX41loTVRCQRasbCs/OO9E0yackp3NaUAUeR+xxk4Ej8iR4sKHBpJ4rOlXplFukIZxUZYboLcaUV1Ub1Jfhj1bqQWJULiD7NPmuO0ax/1PPUctWbG0xfquFzpR+xssgBt1+HhnZXz0lCoSlYNKVNyqoOQlGX/NFRkgkzJgWq0vxqCHykBsAu
+            type: string
+        - description: authtoken
+          in: query
+          name: authtoken
+          schema:
+            default: >-
+              a2522d9d8d4211babba89c91438439dedK0nTISTlUyW0ameA+xPQotVBWL67zBNDxcfLVp1XptPZ6rSPq6hD8pb2iKBE/7u4qfuOYlmbc3BW/HIZusn4lE9NgYdAtIRMUXcDEjOuSbGafSJNTPAR43KP6FaCw5JITSEqJxC8/Iwkrf/JlFiuzaH5NhyV9WLlSIY36NgjVsGJayypEfCOoNf1jWcjnbe8FEqXFfo8ashYFSn4OyOL1m9c001l3G7Ruiq5FcY7hiy3ywDYsj6mWcXlE5BiOtZrpd+3Yqvpa8yOM7KW8myCSNIoyP+l6jgdfDvfTc5M5i9Ajtp7tLBPCoM3+8W4zN9LcU9NPqNwcDJWE4wHxl8CrzAaNlY+QLsniVb7GE8KWov9N3OihKZn9AaaTf4cA76Iqe+HqXwldaWWzU4yeVzfgE3D2Vv9dtib8URndL5DXaR1GrvU9UjNGu6Ioqzd4GH4axhtn00EcOc/9vn67u9ehVd81rM87vmDaYkIkHu7N1ItM+cWhUiE4qrlPrGikvcp2wUhSLVpzsP+R6oC4fSBNX0yH1xSaQyGE9NKnSh2zW4fGHPOGibX66KcNBRtX1xENlfyWF7dg3DjkXJUCq0xr9o5MeAiLi++J3qf5DDvogu5zemrk+NCVO/rN9V9+XRoyYkrOEinxIjEArmsvdOlvhazFRYQMbIoXk+6fZPfT3yoK66GfTmgYvnYiSSqcWkdaqMmbL+9rRNxf7LyFJ2iSxxiCf4+xt5nQucF9dDGfS2NqC8uNujH8XHF6sxfSp3
+            example: >-
+              a2522d9d8d4211babba89c91438439dedK0nTISTlUyW0ameA+xPQotVBWL67zBNDxcfLVp1XptPZ6rSPq6hD8pb2iKBE/7u4qfuOYlmbc3BW/HIZusn4lE9NgYdAtIRMUXcDEjOuSbGafSJNTPAR43KP6FaCw5JITSEqJxC8/Iwkrf/JlFiuzaH5NhyV9WLlSIY36NgjVsGJayypEfCOoNf1jWcjnbe8FEqXFfo8ashYFSn4OyOL1m9c001l3G7Ruiq5FcY7hiy3ywDYsj6mWcXlE5BiOtZrpd+3Yqvpa8yOM7KW8myCSNIoyP+l6jgdfDvfTc5M5i9Ajtp7tLBPCoM3+8W4zN9LcU9NPqNwcDJWE4wHxl8CrzAaNlY+QLsniVb7GE8KWov9N3OihKZn9AaaTf4cA76Iqe+HqXwldaWWzU4yeVzfgE3D2Vv9dtib8URndL5DXaR1GrvU9UjNGu6Ioqzd4GH4axhtn00EcOc/9vn67u9ehVd81rM87vmDaYkIkHu7N1ItM+cWhUiE4qrlPrGikvcp2wUhSLVpzsP+R6oC4fSBNX0yH1xSaQyGE9NKnSh2zW4fGHPOGibX66KcNBRtX1xENlfyWF7dg3DjkXJUCq0xr9o5MeAiLi++J3qf5DDvogu5zemrk+NCVO/rN9V9+XRoyYkrOEinxIjEArmsvdOlvhazFRYQMbIoXk+6fZPfT3yoK66GfTmgYvnYiSSqcWkdaqMmbL+9rRNxf7LyFJ2iSxxiCf4+xt5nQucF9dDGfS2NqC8uNujH8XHF6sxfSp3
+            type: string
+      responses:
+        '200':
+          content:
+            application/pdf:
+              schema:
+                format: binary
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+      summary: Get Ecourt Mobile DC Display Pdf Php
+    parameters: []
+  /ecourt_mobile_DC/districtWebService.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcDistrictWebServicePhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              dacef457c6e45b464T3sIvaTSLyP+W2/LhWy6X9UgfJDomLs3s0pWA8oCDwPl6QD1Tdig66K+XskRJwMM
+            example: >-
+              dacef457c6e45b464T3sIvaTSLyP+W2/LhWy6X9UgfJDomLs3s0pWA8oCDwPl6QD1Tdig66K+XskRJwMM
+            type: string
+        - description: Cookie
+          in: header
+          name: Cookie
+          schema:
+            default: JSESSION=81500815
+            example: JSESSION=81500815
+            type: string
+        - description: Authorization
+          in: header
+          name: Authorization
+          schema:
+            default: >-
+              Bearer
+              bb53397aff2598be5iHNYhDlIJCpvkJJrM6TQrBP3Y2AciVodc5lI996WraB6YtWpaTCe12KslnCMOD2iLMUhlmhCgtcDrTa1zGGajj0IiCCjMxp6J96m7GAkL/uwYrdFiRQBYX7NTdLk6XhM24efXAJ/slccdLa+rK5uB+IdF5nJShZEz3oBsWT6r/Jj6KUly5gNmIQJKbC88xGZgDjIRxAkjCve7cPzGOcTi7JJvjN/VHKSBGlaXjfxpO+NN2mftmIWZ8Lrtj2jA5/mVjPmclXgfQ/JjzFH5yug48eTSSmmNL/I4ZgEpkXRdrBznHS3cDhztboB/5uvsdCvxcpwJSN8bT+EFg5es2LdfUgNSHivZEiCebG4b3Ki6V7D0UMSHlXgiTCDswZlpVmg7AijseMV5olHt+d0XUIiSuwqOY4awP3VeNhFP+n2n8BaGqdLuXzQ89sp2VqxMj5+9YCx8lCBIZlc0EH8w62Mz8k73m9ryXKcn+w/7aWGDXnnCtQdtcgOOFViAM6gi+nOw+IKKclHgrDrSPKstfZepQ==
+            example: >-
+              Bearer
+              bb53397aff2598be5iHNYhDlIJCpvkJJrM6TQrBP3Y2AciVodc5lI996WraB6YtWpaTCe12KslnCMOD2iLMUhlmhCgtcDrTa1zGGajj0IiCCjMxp6J96m7GAkL/uwYrdFiRQBYX7NTdLk6XhM24efXAJ/slccdLa+rK5uB+IdF5nJShZEz3oBsWT6r/Jj6KUly5gNmIQJKbC88xGZgDjIRxAkjCve7cPzGOcTi7JJvjN/VHKSBGlaXjfxpO+NN2mftmIWZ8Lrtj2jA5/mVjPmclXgfQ/JjzFH5yug48eTSSmmNL/I4ZgEpkXRdrBznHS3cDhztboB/5uvsdCvxcpwJSN8bT+EFg5es2LdfUgNSHivZEiCebG4b3Ki6V7D0UMSHlXgiTCDswZlpVmg7AijseMV5olHt+d0XUIiSuwqOY4awP3VeNhFP+n2n8BaGqdLuXzQ89sp2VqxMj5+9YCx8lCBIZlc0EH8w62Mz8k73m9ryXKcn+w/7aWGDXnnCtQdtcgOOFViAM6gi+nOw+IKKclHgrDrSPKstfZepQ==
+            type: string
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+      security:
+        - Authorization: []
+          Cookie: []
+      summary: Get Ecourt Mobile DC District Web Service Php
+    parameters: []
+  /ecourt_mobile_DC/getAllLabelsWebService.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcGetAllLabelsWebServicePhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              84a7b0354cec533811fVkCVcPcO0uswAEOywzkjsEslGEVloTpII53BNd503MPhbQMLCucWb7H7mwf+vGUpECPMpOlb/3LbcFp2ks2w==
+            example: >-
+              84a7b0354cec533811fVkCVcPcO0uswAEOywzkjsEslGEVloTpII53BNd503MPhbQMLCucWb7H7mwf+vGUpECPMpOlb/3LbcFp2ks2w==
+            type: string
+        - description: Cookie
+          in: header
+          name: Cookie
+          schema:
+            default: JSESSION=81500815
+            example: JSESSION=81500815
+            type: string
+        - description: Authorization
+          in: header
+          name: Authorization
+          schema:
+            default: >-
+              Bearer
+              a0850ea4c9ba9a8d3m+d+03ctIj8Va9F6u7twaG6NRpjFXT3HWLlfe2DnyDQBMyq05acMARWcwhEBHXq3H88KOEhMktwBgk/ju235nY7vqXUT5lGYsv6Ld9RCn8E4JWJmYpvQvTVUxjI3Vb0dx4pqqOVYNqtDyFqORQf9TTXY3z2YenDEoRG/H0ojelPY7AGacVNjW0X49kjO/EwSEYvCbpgQkFAhSbVj/c1AidbFugyduzkyCvbXkxeTvTJe3VG43y0xjGmhvr5aFX0e13SterprBWgKNIspvBDLzwAof1PJo2hQLYT0WboPle4daZeh6c1lxKGKV0NGRULmnXSxlmaZA67NSCOxGeVpWa7NxaEbrowwdzxA24yyCfBeIMs21+Zry3pGiqv/9rMsorVUPP6kiBUkQNi32z7QnBo3ZJRjHL0GzyogiWUyG1ddqcWw5zI1RnK1eYvZfo7arK6/dHxa5x/cc+qH+4BSvsNS1f1lq5YEI50Y1EF5oqzR22VwzCB6cG6EfONYmorOsNHOvYCC2AFMqm1eTtUqzA==
+            example: >-
+              Bearer
+              a0850ea4c9ba9a8d3m+d+03ctIj8Va9F6u7twaG6NRpjFXT3HWLlfe2DnyDQBMyq05acMARWcwhEBHXq3H88KOEhMktwBgk/ju235nY7vqXUT5lGYsv6Ld9RCn8E4JWJmYpvQvTVUxjI3Vb0dx4pqqOVYNqtDyFqORQf9TTXY3z2YenDEoRG/H0ojelPY7AGacVNjW0X49kjO/EwSEYvCbpgQkFAhSbVj/c1AidbFugyduzkyCvbXkxeTvTJe3VG43y0xjGmhvr5aFX0e13SterprBWgKNIspvBDLzwAof1PJo2hQLYT0WboPle4daZeh6c1lxKGKV0NGRULmnXSxlmaZA67NSCOxGeVpWa7NxaEbrowwdzxA24yyCfBeIMs21+Zry3pGiqv/9rMsorVUPP6kiBUkQNi32z7QnBo3ZJRjHL0GzyogiWUyG1ddqcWw5zI1RnK1eYvZfo7arK6/dHxa5x/cc+qH+4BSvsNS1f1lq5YEI50Y1EF5oqzR22VwzCB6cG6EfONYmorOsNHOvYCC2AFMqm1eTtUqzA==
+            type: string
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+      security:
+        - Authorization: []
+          Cookie: []
+      summary: Get Ecourt Mobile DC Get All Labels Web Service Php
+    parameters: []
+  /ecourt_mobile_DC/searchByCaseType.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcSearchByCaseTypePhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              c73ee77479dae2971mjuG0ihikqj2MokB4lsbAw07RDJZVa/BhTbqhc94M1D3lKw63XyiZlHqLk9BBmAYFf4vL1LHTohCUZ/7bsxYG8YSvnMsLYsitY6truERAawKd4l3wzmc2H1cr/iMohQrFjecAvhc2aqJHnpjdYyYHu99NUbArX8joW4NydZkAcCN4UtelIMdDyGXV+TEbT6DqGzjhd4C8hcs1OtUkq22ZlhbMqy8NKjN1ZGRNOnYTes=
+            example: >-
+              c73ee77479dae2971mjuG0ihikqj2MokB4lsbAw07RDJZVa/BhTbqhc94M1D3lKw63XyiZlHqLk9BBmAYFf4vL1LHTohCUZ/7bsxYG8YSvnMsLYsitY6truERAawKd4l3wzmc2H1cr/iMohQrFjecAvhc2aqJHnpjdYyYHu99NUbArX8joW4NydZkAcCN4UtelIMdDyGXV+TEbT6DqGzjhd4C8hcs1OtUkq22ZlhbMqy8NKjN1ZGRNOnYTes=
+            type: string
+        - description: Cookie
+          in: header
+          name: Cookie
+          schema:
+            default: JSESSION=81500815
+            example: JSESSION=81500815
+            type: string
+        - description: Authorization
+          in: header
+          name: Authorization
+          schema:
+            default: >-
+              Bearer
+              29708c0656a566d243fOKwjplbaPQZwFSWToKXAePBs7X/dxS5DALAJxFbMo3tSLFaXnkUp6E/cR12ORU90hDYrNy5+p+RlYz7NxSzix/y4cguVf1UNqb1GBg9PeJWdDUReJoQj8RbktknU14cb+e8BDosJN7hFhqhEJSUEvFDsE1iU1MCSrPFbjU08WyLVaVEaZl3pLiZ2NOiLSnKnTwF28N3cYPSTTXdRWfhkUJiSbMNhj7fm2eNXsz3g3BZRSd/5kCFkUgzZB843tEBnYsp9BzUQj51ziXvvIAa72Rn+SviL+vmdz7YDQOSorutAsSdRm0juk7XkCraWkpYCLh81lODanntsl+8HPvJ9gSRRT7VjyJYzuENVpHim+QShW8yTToNq47jV3ybLQV6Pa7q0GlB9jlWVUbgRkCqVIeeK5MQ9lzR/VjbYePlfz5B424PcN0FJwPI0ftFGU+TYeGM52AOSfrwGtTn8kSC0oqNd9+5XPGx95eOWQ8lPqMftlxZksGiaiW6A8F25dL1xchaIerbN9hdLlJdDSxpg==
+            example: >-
+              Bearer
+              29708c0656a566d243fOKwjplbaPQZwFSWToKXAePBs7X/dxS5DALAJxFbMo3tSLFaXnkUp6E/cR12ORU90hDYrNy5+p+RlYz7NxSzix/y4cguVf1UNqb1GBg9PeJWdDUReJoQj8RbktknU14cb+e8BDosJN7hFhqhEJSUEvFDsE1iU1MCSrPFbjU08WyLVaVEaZl3pLiZ2NOiLSnKnTwF28N3cYPSTTXdRWfhkUJiSbMNhj7fm2eNXsz3g3BZRSd/5kCFkUgzZB843tEBnYsp9BzUQj51ziXvvIAa72Rn+SviL+vmdz7YDQOSorutAsSdRm0juk7XkCraWkpYCLh81lODanntsl+8HPvJ9gSRRT7VjyJYzuENVpHim+QShW8yTToNq47jV3ybLQV6Pa7q0GlB9jlWVUbgRkCqVIeeK5MQ9lzR/VjbYePlfz5B424PcN0FJwPI0ftFGU+TYeGM52AOSfrwGtTn8kSC0oqNd9+5XPGx95eOWQ8lPqMftlxZksGiaiW6A8F25dL1xchaIerbN9hdLlJdDSxpg==
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+        '999':
+          description: Unknown
+      security:
+        - Authorization: []
+          Cookie: []
+      summary: Get Ecourt Mobile DC Search By Case Type Php
+    parameters: []
+  /ecourt_mobile_DC/stateWebService.php:
+    get:
+      description: ''
+      operationId: getEcourtMobileDcStateWebServicePhp
+      parameters:
+        - description: params
+          in: query
+          name: params
+          schema:
+            default: >-
+              a19d6e8de403506e0F0DdCGhQTGsDL2K9w2VXNbGEM1ZzEHFM+RjKYB1BGbA/7Gf/8kQdhBuJQwKAHBmI6na0Yn8iogrqN871VUNVqg==
+            example: >-
+              a19d6e8de403506e0F0DdCGhQTGsDL2K9w2VXNbGEM1ZzEHFM+RjKYB1BGbA/7Gf/8kQdhBuJQwKAHBmI6na0Yn8iogrqN871VUNVqg==
+            type: string
+        - description: Cookie
+          in: header
+          name: Cookie
+          schema:
+            default: JSESSION=81500815
+            example: JSESSION=81500815
+            type: string
+        - description: Authorization
+          in: header
+          name: Authorization
+          schema:
+            default: >-
+              Bearer
+              333a1bce8ef162742xMN6T0p8DZynE4x6INZLjwl7gmAlrts77I0g9V2Vp3tBzvJP22wJ2N5dXvFbMIJ/VU89aP+mFKliSrooHC1mWQNW63Iz9jTEZZqnSdxtKLv1fPTdDmgVAqfc97gfEWJIdYruRG97qXLqaG+qJHT7JMEKUabGnCg3dE+XdVG1I6zU46RoljbuCdIQWiXl18apU+jADPog4DcM6IOybSZv/du6vytVgL7qSVQa0PU9D4arpkSAfsTIg6WzAJaCN9UL95kOwpIpziE2BZbU5rmjUk44PIP9XUgq+/cofBJ/WA7umWMRst02E4DS4lvPGMPc+J7va0NAMxcpbliPxbDVr+o9GhOGKhS5ccygKlB8QWi4+OoPKxegqtBYG07hC0qjNIC6WDR0OTpKjIng6AriACILPO2XILfifuMW/Q6sqIsLOmILukIh7u3SHz2UsnD7iTWnJ3fMzqNg9LCNRb89/rP538HvHPIx4QhhuI7EAhv5gagwNm5CqqYSrqm0kzj+h2nM3iFGp5J3z5I6YFT8TA==
+            example: >-
+              Bearer
+              333a1bce8ef162742xMN6T0p8DZynE4x6INZLjwl7gmAlrts77I0g9V2Vp3tBzvJP22wJ2N5dXvFbMIJ/VU89aP+mFKliSrooHC1mWQNW63Iz9jTEZZqnSdxtKLv1fPTdDmgVAqfc97gfEWJIdYruRG97qXLqaG+qJHT7JMEKUabGnCg3dE+XdVG1I6zU46RoljbuCdIQWiXl18apU+jADPog4DcM6IOybSZv/du6vytVgL7qSVQa0PU9D4arpkSAfsTIg6WzAJaCN9UL95kOwpIpziE2BZbU5rmjUk44PIP9XUgq+/cofBJ/WA7umWMRst02E4DS4lvPGMPc+J7va0NAMxcpbliPxbDVr+o9GhOGKhS5ccygKlB8QWi4+OoPKxegqtBYG07hC0qjNIC6WDR0OTpKjIng6AriACILPO2XILfifuMW/Q6sqIsLOmILukIh7u3SHz2UsnD7iTWnJ3fMzqNg9LCNRb89/rP538HvHPIx4QhhuI7EAhv5gagwNm5CqqYSrqm0kzj+h2nM3iFGp5J3z5I6YFT8TA==
+            type: string
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: ''
+          headers:
+            Permissions-Policy:
+              description: Custom header Permissions-Policy
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Custom header X-Content-Type-Options
+              schema:
+                type: string
+      security:
+        - Authorization: []
+          Cookie: []
+      summary: Get Ecourt Mobile DC State Web Service Php
+    parameters: []
+servers:
+  - url: https://app.ecourts.gov.in
+components:
+  securitySchemes:
+    Cookie:
+      type: apiKey
+      name: Cookie
+      in: header

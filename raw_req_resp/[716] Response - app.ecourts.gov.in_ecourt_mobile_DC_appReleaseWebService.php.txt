@@ -1,0 +1,31 @@
+HTTP/1.1 200 OK
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Frame-Options: SAMEORIGIN
+X-Xss-Protection: 1; mode=block
+Date: Sun, 25 Jan 2026 06:40:03 GMT
+Server: 
+X-Powered-By: PHP/8.0.12
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Allow-Headers: x-requested-with, Content-Type, origin, Authorization, accept, client-security-token
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Set-Cookie: APP_SESSID=5pui5fe7h5286c1c0av1t95f5k; path=/ecourt_mobile_encrypted; secure; HttpOnly; SameSite=Strict
+X-Content-Type-Options: nosniff
+Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; object-src 'none'
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Referrer-Policy: strict-origin
+Expect-CT: max-age=3600, enforce
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1212
+Set-Cookie: JSESSION=37538899; Path=/ecourt_mobile_DC; SameSite=Strict; HttpOnly; Secure
+Set-Cookie: JSESSION=16275267; Path=/ecourt_mobile_HC; SameSite=Strict; HttpOnly; Secure
+Set-Cookie: JSESSION=38411428; Path=/ecourt_mobile_encrypted_DC; SameSite=Strict; HttpOnly; Secure
+Set-Cookie: JSESSION=80864229; Path=/ecourt_mobile_encrypted_HC; SameSite=Strict; HttpOnly; Secure
+
+
+
+669e56e6305aaf327f175f00909ebf36z8SMOjXRbSm4wyySG1xcBkLrrd0u9//ABGNR+m0j7ZqaF4XTQJIJqApOf0t5LJR2db+I23YNAt9RboBkybp6x9rBh+NVuN4TBIVQrau0CttAjl3o7WYNCn9I1MCpLDS7QZFKaOaaCD0hmVCY4CGH6JjySh26FaRqDrRcACPxfogQMOHOTGljIO1lyr8umv+P9t2e5B1oA5z1y2k7aWPxN8NLvrrSyvlImV+wBUZIA7UOGvlBcvCg5dt/GQnBzBtfZLJl4dmgbkiNZlEODqXOgdb9y99mGo69klspisSNBF1r0XfJJ3LXamGXmtxGj9BPLze6KdmbvRAmIAFD4+myAD/uncQGsbjjiAGCSTGpr8WXi9EByEClLJ96q3zHUrgNjqkeQw7oaGpglY7ALtEoNuC43eoGhsPE8MeteF/A3slY+KDYRNF5pMnBklNsykKl2j+S7GlepzvLTfv090k1YOQP1vtm2GLw6V7eFA1bOsurqizXSqW9Icb0Ij7XTpMYtlytsHo8r71bZU6fjoIWG4DmhbX6lg6SD/EiJ6Xk87mDDTQv4yZBpJJvSeTQ2PAlzIFlRMguDSLoC46tfhK4lOdbfHHD09AtxW89uesoeJ7qse/Mt2LLhnEPwtXLlmFQ/EqbIQeDD0NvcB4DxfHZokiTZPXf/OSfL+JjoItKFTKIMhT/FIJkU/EYgkMlP0uM3Yz7oLCHxpeYCLHZE0psR9KDtRGr/S+Lnx2Xkg7vKvG/NdGPkJwVF5hula5n41WiulMKyULgRUHPfqXg7y/y5Dk/y1O4u1b1rWZnB91Rd3NrGFOJ/w4u/zSttF1UGMcfdL5g09OBJ82vxHD65zsRO6rfp+qkFy8XUfvule6T9YuedKZzK+nJTyfFaNxKbKvBqc8DtgDmkNAPzVE+TZMOdVQvYac1FaMgn6FwSlWL/Ts4VPvG1n/f91mv8JxZciuNNN0z5ZDxGmSTT1iWzlgLuUgZIZMXiaxdXjljDXrZRbXW+faN8KqFmUnbroTGcD5nMHI1B/stDJFhRhB3alVM4TTkxkzb45HLZtrPE32ZWD9TXKzsDgHQzu8Jq02JyOf+e4AkYtdHSANBivx54rVYyN5sWtdL6QG1F0YibqVy8FJmLi7xTIYUBOVWJEjXmW+rfTFamTYN+9lHUkFBFMRhQA==

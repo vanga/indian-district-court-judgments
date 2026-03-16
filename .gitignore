@@ -172,3 +172,20 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Project-specific
+local_dc_judgments_data/
+captcha-tmp/
+captcha-failures/
+packages/
+*.png
+dc_fill_track.json
+dc_sync_track.json
+dc_completed_tasks.json
+run.txt
+
+# Serena
+.serena/
+
+# DS_Store files
+.DS_Store

@@ -1,0 +1,8 @@
+GET /ecourt_mobile_DC/appReleaseWebService.php?params=7c6e72ef97fc50122uErb17oe0yl0rA97qVcl7hy7%2BKi2YE3obCivnHkvVm%2FsK419%2F9waw78lSMRfnPjrYDoevPiyyPdxckXVo0sw4tNSb77%2BzqcU7KtwjHzvzPA%3D HTTP/1.1
+Accept-Charset: UTF-8
+Cookie: JSESSION=81500815
+User-Agent: Dalvik/2.1.0 (Linux; U; Android 14; SM-X205 Build/UP1A.231005.007)
+Host: app.ecourts.gov.in
+Connection: Keep-Alive
+Accept-Encoding: gzip
+

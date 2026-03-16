@@ -1,0 +1,9 @@
+GET /ecourt_mobile_DC/courtEstWebService.php?params=2eeb67cfcb55a60b3NgUsZ6WOAoj7IsYp0b9YeKjLBAqgHrsjd%2BG7zx41uglJ8f%2Bt12AUXTuf5ix9zYswExGoGg3g6iUGT%2F9pd%2FAovLA2Gka6Em67sRNRUgTvHHY%3D HTTP/1.1
+Accept-Charset: UTF-8
+Cookie: JSESSION=37538899
+Authorization: Bearer 02356df0311e05304WANWjIvcrwwkSllxtAU3inzi0WjLzTWo15yZmDeGZzyZ+Oyyche0dac/JTYJ8UmkNFXVcyC5ezLcqplFSU+sExhGYrOKrha3iqmofQZjdiD0h2jYGfkcDzUR/m+0bJIK18oAAUnWwkH1M+YAHs0HG0rrsYVcNc2093cn8Fnu8YCrZx/0lbw+FxsT/T88y/Br4TqZDC3GlEGnttjV6xm1kbcy8j4rwxe5DbKJOWMSoNk1V9yRfhaWz3/bf/dw8RWrmmt765mlebjQTuP/eDNBGg7YiXVpuiV/MM8oUwyT/YcRI7VIJDSs8y3GB9PejijIR72huVgHonXEvXqV2dLUHpg7nCxhj0b5IucRvFYZ5eAJwh8gb5/oQy8G6yGQQuvBRgwyjPpvl/Lh6d/XENFPnS0yVlj20tmthwj70j9VxDyQZX/2T93RUFHxqm7hTdBONJe+L0yHuuGiIGlWgUGXncyI7h98iu2Mgytkupqk7iNOpJ5m9cURL4p6FecYy3L9wGl4hFuVPTglpMwgvNngeQ==
+User-Agent: Dalvik/2.1.0 (Linux; U; Android 14; SM-X205 Build/UP1A.231005.007)
+Host: app.ecourts.gov.in
+Connection: Keep-Alive
+Accept-Encoding: gzip
+

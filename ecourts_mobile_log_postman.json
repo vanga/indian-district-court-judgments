@@ -1,0 +1,527 @@
+{
+  "info": {
+    "name": "Proxyman Code Generator: PostmanCollection2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "CONNECT /",
+      "request": {
+        "method": "CONNECT",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "name": "CONNECT /",
+      "request": {
+        "method": "CONNECT",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "name": "CONNECT /",
+      "request": {
+        "method": "CONNECT",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "name": "CONNECT /",
+      "request": {
+        "method": "CONNECT",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "name": "CONNECT /",
+      "request": {
+        "method": "CONNECT",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "name": "CONNECT /",
+      "request": {
+        "method": "CONNECT",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "name": "CONNECT /",
+      "request": {
+        "method": "CONNECT",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "name": "CONNECT /",
+      "request": {
+        "method": "CONNECT",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "name": "CONNECT /",
+      "request": {
+        "method": "CONNECT",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/getAllLabelsWebService.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/getAllLabelsWebService.php?language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/getAllLabelsWebService.php",
+          "query": [
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=13496636" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/stateWebService.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/stateWebService.php?action_code=POaJ42M9nP6pkEJim6CFmQ%3D%3D&time=R8zCid7x%2FTaZV45MDmujMw%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/stateWebService.php",
+          "query": [
+            { "value": "POaJ42M9nP6pkEJim6CFmQ==", "key": "action_code" },
+            { "value": "R8zCid7x/TaZV45MDmujMw==", "key": "time" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=13496636" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/appReleaseWebService.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/appReleaseWebService.php?version=2.0.1",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/appReleaseWebService.php",
+          "query": [{ "value": "2.0.1", "key": "version" }]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=13496636" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/districtWebService.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/districtWebService.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&test_param=mE3%2FBdNlfS1JhW62zh3T2Q%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/districtWebService.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "mE3/BdNlfS1JhW62zh3T2Q==", "key": "test_param" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=26958837" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/courtEstWebService.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/courtEstWebService.php?action_code=pKLSnIaHHw4CCm9o9Mo9YBs%2BVaxrK3LJw5duQfjTRiQ%3D&state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/courtEstWebService.php",
+          "query": [
+            {
+              "value": "pKLSnIaHHw4CCm9o9Mo9YBs+VaxrK3LJw5duQfjTRiQ=",
+              "key": "action_code"
+            },
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/courtNameWebService.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/courtNameWebService.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&court_code=zcxPbzl3NJD4rFVGssvT3A%3D%3D&language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/courtNameWebService.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" },
+            { "value": "zcxPbzl3NJD4rFVGssvT3A==", "key": "court_code" },
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/caseNumberWebService.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/caseNumberWebService.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&court_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/caseNumberWebService.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "court_code" },
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/searchByCaseType.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/searchByCaseType.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&court_code=YoiXCreKw%2FX0xiLh42VjTg%3D%3D&language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D&case_type=0iKR9RdsYAzRCXpsDvKOlQ%3D%3D&year=5UpdYwEFmGu5Lez877lQVg%3D%3D&pendingDisposed=gLDF1wsJRH4W108VeQEsEQ%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/searchByCaseType.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" },
+            { "value": "YoiXCreKw/X0xiLh42VjTg==", "key": "court_code" },
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" },
+            { "value": "0iKR9RdsYAzRCXpsDvKOlQ==", "key": "case_type" },
+            { "value": "5UpdYwEFmGu5Lez877lQVg==", "key": "year" },
+            { "value": "gLDF1wsJRH4W108VeQEsEQ==", "key": "pendingDisposed" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/searchByCaseType.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/searchByCaseType.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&court_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D&case_type=0iKR9RdsYAzRCXpsDvKOlQ%3D%3D&year=5UpdYwEFmGu5Lez877lQVg%3D%3D&pendingDisposed=gLDF1wsJRH4W108VeQEsEQ%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/searchByCaseType.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "court_code" },
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" },
+            { "value": "0iKR9RdsYAzRCXpsDvKOlQ==", "key": "case_type" },
+            { "value": "5UpdYwEFmGu5Lez877lQVg==", "key": "year" },
+            { "value": "gLDF1wsJRH4W108VeQEsEQ==", "key": "pendingDisposed" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/searchByCaseType.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/searchByCaseType.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&court_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D&case_type=0iKR9RdsYAzRCXpsDvKOlQ%3D%3D&year=5UpdYwEFmGu5Lez877lQVg%3D%3D&pendingDisposed=w1RPHYl2wFOlR%2F7fYKFhVQ%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/searchByCaseType.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "court_code" },
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" },
+            { "value": "0iKR9RdsYAzRCXpsDvKOlQ==", "key": "case_type" },
+            { "value": "5UpdYwEFmGu5Lez877lQVg==", "key": "year" },
+            { "value": "w1RPHYl2wFOlR/7fYKFhVQ==", "key": "pendingDisposed" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/searchByCaseType.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/searchByCaseType.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&court_code=YoiXCreKw%2FX0xiLh42VjTg%3D%3D&language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D&case_type=0iKR9RdsYAzRCXpsDvKOlQ%3D%3D&year=5UpdYwEFmGu5Lez877lQVg%3D%3D&pendingDisposed=w1RPHYl2wFOlR%2F7fYKFhVQ%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/searchByCaseType.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" },
+            { "value": "YoiXCreKw/X0xiLh42VjTg==", "key": "court_code" },
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" },
+            { "value": "0iKR9RdsYAzRCXpsDvKOlQ==", "key": "case_type" },
+            { "value": "5UpdYwEFmGu5Lez877lQVg==", "key": "year" },
+            { "value": "w1RPHYl2wFOlR/7fYKFhVQ==", "key": "pendingDisposed" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/searchByCaseType.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/searchByCaseType.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&court_code=YoiXCreKw%2FX0xiLh42VjTg%3D%3D&language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D&case_type=kTGHfHPvNufi4i1jshZOOg%3D%3D&year=5UpdYwEFmGu5Lez877lQVg%3D%3D&pendingDisposed=w1RPHYl2wFOlR%2F7fYKFhVQ%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/searchByCaseType.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" },
+            { "value": "YoiXCreKw/X0xiLh42VjTg==", "key": "court_code" },
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" },
+            { "value": "kTGHfHPvNufi4i1jshZOOg==", "key": "case_type" },
+            { "value": "5UpdYwEFmGu5Lez877lQVg==", "key": "year" },
+            { "value": "w1RPHYl2wFOlR/7fYKFhVQ==", "key": "pendingDisposed" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/searchByCaseType.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/searchByCaseType.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&court_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D&case_type=kTGHfHPvNufi4i1jshZOOg%3D%3D&year=5UpdYwEFmGu5Lez877lQVg%3D%3D&pendingDisposed=w1RPHYl2wFOlR%2F7fYKFhVQ%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/searchByCaseType.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "court_code" },
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" },
+            { "value": "kTGHfHPvNufi4i1jshZOOg==", "key": "case_type" },
+            { "value": "5UpdYwEFmGu5Lez877lQVg==", "key": "year" },
+            { "value": "w1RPHYl2wFOlR/7fYKFhVQ==", "key": "pendingDisposed" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    },
+    {
+      "name": "GET /ecourt_mobile_encrypted_DC/caseHistoryWebService.php",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://app.ecourts.gov.in/ecourt_mobile_encrypted_DC/caseHistoryWebService.php?state_code=YanVGicWreBFsmjSO6meCQ%3D%3D&dist_code=kgI20ZnBO8qQnloxM9nZug%3D%3D&case_no=9205DYheAtPf7UzOSB1Hyg%3D%3D&court_code=YoiXCreKw%2FX0xiLh42VjTg%3D%3D&language_flag=OYXI%2FPbEQ5UvCTNs18Z8ug%3D%3D&bilingual_flag=%2Bb82aw%2FFHEpfVc9p01n6zw%3D%3D",
+          "protocol": "https",
+          "host": "app.ecourts.gov.in",
+          "path": "/ecourt_mobile_encrypted_DC/caseHistoryWebService.php",
+          "query": [
+            { "value": "YanVGicWreBFsmjSO6meCQ==", "key": "state_code" },
+            { "value": "kgI20ZnBO8qQnloxM9nZug==", "key": "dist_code" },
+            { "value": "9205DYheAtPf7UzOSB1Hyg==", "key": "case_no" },
+            { "value": "YoiXCreKw/X0xiLh42VjTg==", "key": "court_code" },
+            { "value": "OYXI/PbEQ5UvCTNs18Z8ug==", "key": "language_flag" },
+            { "value": "+b82aw/FHEpfVc9p01n6zw==", "key": "bilingual_flag" }
+          ]
+        },
+        "header": [
+          { "key": "Accept", "value": "*/*" },
+          { "key": "Cookie", "value": "JSESSION=5192092" },
+          {
+            "key": "User-Agent",
+            "value": "eCourtsServices/2.0.1 (iPhone; iOS 26.2; Scale/3.00)"
+          },
+          { "key": "Accept-Language", "value": "en-IN;q=1" },
+          { "key": "Accept-Encoding", "value": "gzip, deflate, br" }
+        ]
+      }
+    }
+  ]
+}

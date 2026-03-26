@@ -651,8 +651,8 @@ class S3ArchiveManager:
         # Clear current tracking
         del self.archives[key]
         del self.archive_paths[key]
-        self.current_part_files[key] = []
-        self.current_part_size[key] = 0
+        self.current_part_files.pop(key, None)
+        self.current_part_size.pop(key, None)
 
     def _save_local_index(
         self,
@@ -778,12 +778,16 @@ class S3ArchiveManager:
                     year, state_code, district_code, complex_code, archive_type
                 )
 
-            index = self.indexes[key]
+            # Check if file already exists using cached set
+            if not hasattr(self, '_file_exists_cache'):
+                self._file_exists_cache: Dict[ArchiveKey, set] = {}
 
-            # Check if file already exists in any part
-            all_existing_files = index.get_all_files()
+            if key not in self._file_exists_cache:
+                index = self.indexes[key]
+                self._file_exists_cache[key] = set(index.get_all_files())
+
             if (
-                filename in all_existing_files
+                filename in self._file_exists_cache[key]
                 or filename in self.current_part_files[key]
             ):
                 logger.debug(
@@ -836,13 +840,20 @@ class S3ArchiveManager:
                     year, state_code, district_code, complex_code, archive_type
                 )
 
-            index = self.indexes[key]
-            all_files = index.get_all_files()
+            # Build a cached set for fast lookups
+            if not hasattr(self, '_file_exists_cache'):
+                self._file_exists_cache: Dict[ArchiveKey, set] = {}
+
+            if key not in self._file_exists_cache:
+                index = self.indexes[key]
+                self._file_exists_cache[key] = set(index.get_all_files())
+
+            cached = self._file_exists_cache[key]
 
             # Also check current part files
-            all_files.extend(self.current_part_files.get(key, []))
+            current = self.current_part_files.get(key, [])
 
-            return filename in all_files
+            return filename in cached or filename in current
 
     def _upload_index(
         self,
@@ -999,6 +1010,31 @@ class S3ArchiveManager:
             else:
                 self._finalize_current_part(year, sc, dc, cc, archive_type, upload=True)
             flushed_count += 1
+
+        # Free memory: remove indexes and tracking for this complex
+        keys_to_remove = [
+            key
+            for key in list(self.indexes.keys())
+            if key[1] == state_code
+            and key[2] == district_code
+            and key[3] == complex_code
+        ]
+        for key in keys_to_remove:
+            self.indexes.pop(key, None)
+            self.current_part_files.pop(key, None)
+            self.current_part_size.pop(key, None)
+            self.modified_archives.discard(key)
+            self.uploaded_archives.discard(key)
+            self.pending_parts.pop(key, None)
+            self.parts_created_count.pop(key, None)
+            if hasattr(self, '_file_exists_cache'):
+                self._file_exists_cache.pop(key, None)
+
+        # Clear new_files_added for this complex
+        location_prefix = f"/{state_code}/{district_code}/{complex_code}"
+        for loc_key in list(self.new_files_added.keys()):
+            if loc_key.endswith(location_prefix) or f"/{state_code}/{district_code}/{complex_code}" in loc_key:
+                del self.new_files_added[loc_key]
 
         if flushed_count > 0:
             logger.info(

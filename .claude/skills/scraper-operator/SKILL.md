@@ -9,13 +9,16 @@ You are the autonomous operator of an Indian District Court judgments scraper. Y
 
 ## Environment Setup
 
+- **Two-stage pipeline**:
+  - Stage 1 (metadata): `scraper.py` — searches cases and collects metadata, no PDF downloads
+  - Stage 2 (PDFs): `pdf_stage.py` — reads metadata from S3 and downloads PDFs
 - **Scraper process**: runs via `~/development/opensource/indian-district-court-judgments/mobile/run_scraper.sh` in tmux session named `scraper`
 - **Log file**: `~/scraper.log`
-- **AWS profile**: `dattam-od` (use `--profile dattam-od` for all AWS CLI commands)
+- **AWS profile**: `dattam-od` (use `--profile dattam-od` for all AWS CLI commands, `AWS_PROFILE=dattam-od` for Python scripts)
 - **S3 bucket**: `indian-district-court-judgments-test` (or check `S3_BUCKET` env var)
 - **Operator state directory**: `~/.scraper-operator/` (create if missing)
 - **Project root**: `~/development/opensource/indian-district-court-judgments`
-- **Scraper code**: `~/development/opensource/indian-district-court-judgments/mobile/scraper.py`
+- **Scraper code**: `~/development/opensource/indian-district-court-judgments/mobile/`
 
 ## Every Invocation
 
@@ -27,8 +30,8 @@ On every invocation, perform these steps in order. Be concise in output — repo
 # Is the scraper running?
 tmux has-session -t scraper 2>/dev/null && echo "RUNNING" || echo "DOWN"
 
-# Is the python process alive?
-pgrep -f "python.*scraper.py" || echo "NO PROCESS"
+# Is a python scraper process alive? (either stage)
+pgrep -f "python.*(scraper|pdf_stage)\.py" || echo "NO PROCESS"
 ```
 
 If the scraper is down:
@@ -45,7 +48,7 @@ Read the last 500 lines of `~/scraper.log`. Extract and analyze:
 - `connection_reset`: "RemoteDisconnected", "Connection aborted", "ConnectionError"
 - `timeout`: "ReadTimeout", "ConnectTimeout"
 - `auth_failure`: "Not in session", "token", "401"
-- `parse_error`: "JSONDecodeError", "KeyError", "decrypt"
+- `parse_error`: "JSONDecodeError", "KeyError", "decrypt", "Skipping malformed"
 - `s3_error`: "NoSuchBucket", "AccessDenied", "upload"
 - `other`: anything else
 
@@ -58,7 +61,8 @@ Read the last 500 lines of `~/scraper.log`. Extract and analyze:
 **Detect anomalies:**
 - Error rate > 15% → trigger debug mode
 - Same error repeated > 50 times → trigger debug mode
-- Zero progress (no "cases processed" or "PDFs downloaded" log lines) for > 30 min → trigger debug mode
+- Zero progress (no "cases processed" log lines) for > 30 min → trigger debug mode
+- "Skipping malformed" warnings appearing frequently → API may have changed response format
 - Disk space < 5GB free → alert
 
 ### Step 3: S3 Progress Check
@@ -71,16 +75,22 @@ aws s3 ls s3://indian-district-court-judgments-test/ --recursive --profile datta
 Download a sample of index files (not all — just enough to measure progress):
 - Pick 5 most recently modified index files
 - Compare file_count to last known values in `~/.scraper-operator/last_check.json`
-- Calculate: cases/hour, PDFs/hour since last check
+- Calculate: cases/hour since last check
 - Estimate: total cases scraped, total remaining (3,500 complexes × ~50 years × ~500 cases avg)
+
+Also check search checkpoint coverage:
+```bash
+# Count how many complexes have search checkpoints
+aws s3 ls s3://indian-district-court-judgments-test/metadata/checkpoints/ --recursive --profile dattam-od | grep 'searches.json' | wc -l
+```
 
 ### Step 4: Data Quality Spot Check
 
 Every invocation, pick 1-2 random archives from S3 and verify:
 
-1. **PDF validity**: Download a random PDF from a tar archive, check it's a valid PDF (starts with `%PDF`), not an HTML error page
+1. **PDF validity**: Download a random PDF from a `data.tar` archive, check it's a valid PDF (starts with `%PDF`), not an HTML error page
 2. **Compression**: If Ghostscript is enabled, check that PDF sizes are reasonable (most should be < 5MB after compression)
-3. **Metadata completeness**: Download a random metadata JSON, verify it has required fields: `case_details`, `location`, `orders`, `scraped_at`
+3. **Metadata completeness**: Download a random metadata JSON, verify it has required fields: `case_summary`, `location`, `orders`, `scraped_at`
 4. **Index integrity**: Verify `file_count` in index matches the sum of `file_count` across parts
 
 Log quality check results to `~/.scraper-operator/quality_log.json`.
@@ -93,11 +103,13 @@ Save current state to `~/.scraper-operator/last_check.json`:
 {
   "timestamp": "ISO-8601",
   "scraper_running": true,
+  "active_stage": "metadata",
   "error_rate_pct": 3.2,
   "connection_errors": 45,
   "cases_processed_total": 311398,
   "cases_since_last_check": 1200,
   "cases_per_hour": 600,
+  "searches_skipped": 8500,
   "current_state": "29",
   "current_district": "1",
   "quality_check_passed": true,
@@ -126,9 +138,9 @@ Triggered when anomalies are detected in Step 2. Goal: find root cause before ap
    ```bash
    cd ~/development/opensource/indian-district-court-judgments/mobile
    # Run a minimal test against the failing endpoint
-   uv run python -c "
-   from api_client import MobileApiClient
-   client = MobileApiClient()
+   AWS_PROFILE=dattam-od uv run python -c "
+   from api_client import MobileAPIClient
+   client = MobileAPIClient()
    client.initialize_session()
    states = client.get_states()
    print(f'API responsive: {len(states)} states returned')
@@ -145,7 +157,7 @@ Triggered when anomalies are detected in Step 2. Goal: find root cause before ap
 Based on diagnosis:
 
 **If load-related (errors correlate with worker count or time of day):**
-- Reduce `DEFAULT_MAX_WORKERS` in scraper.py (e.g., 10 → 5)
+- Reduce `DEFAULT_MAX_WORKERS` in common.py (e.g., 10 → 5)
 - Increase `DEFAULT_DELAY` (e.g., 0.3 → 0.5)
 - Commit the change locally with a descriptive message
 - Restart the scraper
@@ -162,7 +174,8 @@ Based on diagnosis:
 - Check if that district's web portal is accessible via headless browser
 
 **If auth-related (session expiry):**
-- Check if `initialize_session()` is being called properly
+- Each worker thread has its own MobileAPIClient with independent JWT sessions
+- Check if `initialize_session()` is being called properly per thread
 - Verify the JWT token refresh logic in api_client.py
 - Check if the app version or API endpoint has changed
 
@@ -183,6 +196,7 @@ Analyze `~/.scraper-operator/last_check.json` history to understand:
 - Average cases/hour throughput
 - Which districts scrape fastest vs slowest
 - Time-of-day throughput patterns
+- Search checkpoint hit rate (searches_skipped / total searches)
 
 ### Optimization Strategies
 
@@ -198,11 +212,9 @@ Explore and implement these **only when you have evidence they'll help**:
    - If different backends → safe to parallelize across states
    - If same backend → stick to sequential to avoid overload
 
-4. **Skip empty partitions**: Some year/complex combinations may have 0 cases. If the API quickly returns empty results, this is fine. But if it's slow, consider maintaining a skip list.
+4. **Search checkpoint coverage**: Monitor what % of complexes have checkpoints. On re-runs, high checkpoint coverage means most search API calls are skipped. Use `--verify` periodically to catch new cases.
 
-5. **Session reuse**: Verify the `requests.Session` is properly reusing TCP connections. Check for connection pool exhaustion under high concurrency.
-
-6. **Smart ordering**: Scrape recent years first (more useful data), smaller complexes first (quick wins for progress tracking).
+5. **Smart ordering**: Scrape recent years first (more useful data), smaller complexes first (quick wins for progress tracking).
 
 ### Optimization Safety Rules
 
@@ -246,7 +258,9 @@ End every invocation with a concise status report:
 ```
 ## Scraper Status: [HEALTHY | DEGRADED | DOWN]
 
+**Stage**: [Stage 1 (metadata) | Stage 2 (PDFs) | idle]
 **Progress**: X cases total (+Y since last check, Z cases/hour)
+**Checkpoints**: N complexes checkpointed, M searches skipped this run
 **Errors**: A% failure rate (B connection, C timeout, D auth)
 **Quality**: Last check [PASSED | FAILED: reason]
 **Actions taken**: [None | List of actions]

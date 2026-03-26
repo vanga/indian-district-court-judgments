@@ -1,106 +1,60 @@
 """
-eCourts Mobile API Scraper with S3 Sync.
+Stage 1: Metadata Scraper (eCourts Mobile API).
 
-Full scraper for district court judgments using the mobile API.
-Supports PDF downloads, S3 archival, and robust retry logic.
+Searches cases and collects metadata (case history, order info) without
+downloading PDFs. PDF downloads are handled by Stage 2 (pdf_stage.py).
 
 FEATURES:
 - No CAPTCHA required (mobile API advantage)
-- Downloads PDFs directly
-- Syncs to S3 using archive_manager
+- Syncs metadata to S3 using archive_manager
 - Robust retry logic with exponential backoff
 - Resume capability via S3 index files
-- Parquet metadata generation
 
 USAGE:
-    # Scrape specific district
+    # Scrape metadata for a specific district
     uv run python scraper.py --state 29 --district 22 --start-year 1950 --end-year 2025
 
     # Dry run (no S3 upload)
     uv run python scraper.py --state 29 --district 22 --local-only
 
-    # Generate parquet from scraped data
-    uv run python scraper.py --generate-parquet --state 29
+    # Then download PDFs (Stage 2)
+    uv run python pdf_stage.py --state 29 --district 22 --start-year 1950 --end-year 2025
 """
 
 import argparse
 import concurrent.futures
 import json
 import logging
-import os
-import signal
 import sys
-import time
 import threading
-import warnings
+import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Tuple
 from urllib.parse import urlparse, parse_qs
 
-import urllib3
-import colorlog
 from tqdm import tqdm
 
-# Suppress SSL warnings - eCourts API uses certificate that doesn't verify
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-warnings.filterwarnings("ignore", message="Unverified HTTPS request")
-
-# Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from archive_manager import S3ArchiveManager, format_size
+from archive_manager import S3ArchiveManager
 from api_client import (
     MobileAPIClient,
     State,
     District,
     CourtComplex,
-    CaseType,
     Case,
     Order,
 )
-from crypto import decrypt_url_param
-from gs import check_ghostscript_available, compress_pdf_bytes
-
-# Configure colored logging
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.INFO)
-
-# Remove any existing handlers
-for handler in root_logger.handlers[:]:
-    root_logger.removeHandler(handler)
-
-# Add colored console handler
-console_handler = colorlog.StreamHandler()
-console_handler.setFormatter(
-    colorlog.ColoredFormatter(
-        "%(log_color)s%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        log_colors={
-            "DEBUG": "cyan",
-            "INFO": "green",
-            "WARNING": "yellow",
-            "ERROR": "red",
-            "CRITICAL": "red,bg_white",
-        },
-    )
+from common import (
+    IST, S3_BUCKET, LOCAL_DIR, DEFAULT_DELAY, DEFAULT_MAX_WORKERS,
+    setup_logging, add_common_args, ScraperBase, SearchCheckpoint,
 )
-root_logger.addHandler(console_handler)
+from crypto import decrypt_url_param
 
+setup_logging()
 logger = logging.getLogger(__name__)
-
-# IST timezone
-IST = timezone(timedelta(hours=5, minutes=30))
-
-# Configuration
-S3_BUCKET = os.environ.get("S3_BUCKET", "indian-district-court-judgments-test")
-LOCAL_DIR = Path("./local_mobile_data")
-DEFAULT_DELAY = 0.3  # Seconds between API calls
-DEFAULT_MAX_WORKERS = 10  # Number of concurrent case type processors
-MAX_PDF_RETRIES = 3  # Maximum retries for PDF downloads
-
-
 @dataclass
 class CaseTypeTask:
     """A task for processing a single case type in a complex."""
@@ -111,17 +65,9 @@ class CaseTypeTask:
     status: str  # "Pending" or "Disposed"
 
 
-# Check if Ghostscript is available for PDF compression
-COMPRESSION_AVAILABLE = check_ghostscript_available()
-if COMPRESSION_AVAILABLE:
-    logger.info("PDF compression enabled (Ghostscript found)")
-else:
-    logger.warning("PDF compression not available (Ghostscript not found)")
-
-
-class MobileScraper:
+class MobileScraper(ScraperBase):
     """
-    Enhanced scraper for eCourts Mobile API with S3 sync.
+    Stage 1: Metadata scraper for eCourts Mobile API with S3 sync.
     """
 
     def __init__(
@@ -133,35 +79,34 @@ class MobileScraper:
         max_workers: int = DEFAULT_MAX_WORKERS,
         local_only: bool = False,
         immediate_upload: bool = True,
-        compress_pdfs: bool = True,
+        verify: bool = False,
     ):
-        self.client = MobileAPIClient()
-        self.s3_bucket = s3_bucket
-        self.local_dir = Path(local_dir)
-        self.delay = delay
-        self.max_retries = max_retries
+        super().__init__(
+            client=MobileAPIClient(),
+            s3_bucket=s3_bucket,
+            local_dir=local_dir,
+            delay=delay,
+            max_retries=max_retries,
+        )
         self.max_workers = max_workers
         self.local_only = local_only
         self.immediate_upload = immediate_upload
-        self.compress_pdfs = compress_pdfs and COMPRESSION_AVAILABLE
+        self.verify = verify
+        self._checkpoint: Optional[SearchCheckpoint] = None
 
         self.archive_manager: Optional[S3ArchiveManager] = None
-        self._interrupted = False
-        self._stats_lock = threading.Lock()
-
         self.stats = {
             "states_processed": 0,
             "districts_processed": 0,
             "complexes_processed": 0,
             "case_types_processed": 0,
+            "searches_skipped": 0,
+            "searches_empty": 0,
+            "searches_failed": 0,
             "cases_found": 0,
             "cases_processed": 0,
             "cases_skipped": 0,
-            "pdfs_downloaded": 0,
-            "pdfs_compressed": 0,
-            "pdfs_failed": 0,
-            "pdfs_retried": 0,
-            "bytes_saved": 0,
+            "history_failed": 0,
             "errors": 0,
             "api_retries": 0,
             "api_failures": 0,
@@ -169,27 +114,20 @@ class MobileScraper:
             "start_time": None,
             "end_time": None,
         }
+        self._failed_operations: list[dict] = []
+        self._failed_lock = self._stats_lock  # reuse the same lock
         self._last_status_time = time.time()
+        self._thread_local = threading.local()
 
-        # Set up signal handler for clean shutdown
-        signal.signal(signal.SIGINT, self._handle_interrupt)
-        signal.signal(signal.SIGTERM, self._handle_interrupt)
-
-    def _handle_interrupt(self, signum, frame):
-        """Handle interrupt signal for clean shutdown."""
-        if self._interrupted:
-            logger.warning("Forced exit - archives may be incomplete!")
-            sys.exit(1)
-
-        logger.info("\nInterrupt received - finishing current operation and saving...")
-        self._interrupted = True
-
-    def _update_stats(self, **kwargs):
-        """Thread-safe stats update."""
-        with self._stats_lock:
-            for key, value in kwargs.items():
-                if key in self.stats:
-                    self.stats[key] += value
+    def _get_worker_client(self) -> MobileAPIClient:
+        """Get or create a per-thread MobileAPIClient with its own JWT session."""
+        client = getattr(self._thread_local, "client", None)
+        if client is None:
+            client = MobileAPIClient()
+            client.initialize_session()
+            self._thread_local.client = client
+            logger.debug(f"Initialized worker client on thread {threading.current_thread().name}")
+        return client
 
     def _retry_with_backoff(self, func, *args, **kwargs):
         """Execute function with exponential backoff retry."""
@@ -211,33 +149,6 @@ class MobileScraper:
 
         self._update_stats(api_failures=1)
         return None
-
-    def _ensure_session(self) -> bool:
-        """Ensure API client has valid session."""
-        if not self.client._initialized:
-            logger.info("Initializing API session...")
-            for attempt in range(self.max_retries):
-                try:
-                    if self.client.initialize_session():
-                        logger.info("API session initialized successfully")
-                        return True
-                    else:
-                        logger.warning(
-                            f"Session init attempt {attempt + 1}/{self.max_retries} returned False"
-                        )
-                except Exception as e:
-                    logger.warning(
-                        f"Session init attempt {attempt + 1}/{self.max_retries} failed: {e}"
-                    )
-
-                if attempt < self.max_retries - 1:
-                    wait_time = (2**attempt) + 1
-                    logger.info(f"Waiting {wait_time}s before retry...")
-                    time.sleep(wait_time)
-
-            logger.error("All session init attempts failed")
-            return False
-        return True
 
     def _log_periodic_status(self):
         """Log a status summary every 5 minutes."""
@@ -273,10 +184,8 @@ class MobileScraper:
             f"CASES  | found: {self.stats['cases_found']} | "
             f"processed: {self.stats['cases_processed']} | "
             f"skipped: {self.stats['cases_skipped']}\n"
-            f"PDFs   | downloaded: {self.stats['pdfs_downloaded']} | "
-            f"failed: {self.stats['pdfs_failed']} | "
-            f"retried: {self.stats['pdfs_retried']}\n"
-            f"ERRORS | api_retries: {self.stats['api_retries']} | "
+            f"FAILS  | searches: {self.stats['searches_failed']} | "
+            f"history: {self.stats['history_failed']} | "
             f"api_failures: {self.stats['api_failures']} | "
             f"conn_errors: {self.stats['connection_errors']} | "
             f"failure_rate: {failure_rate:.1f}% | "
@@ -361,139 +270,6 @@ class MobileScraper:
             pass
         return datetime.now().year
 
-    def _download_pdf_with_retry(
-        self,
-        order,
-        year: int,
-        state: State,
-        district: District,
-        complex_: CourtComplex,
-    ) -> bool:
-        """
-        Download a PDF with explicit retry logic and failure tracking.
-
-        Returns True if PDF was downloaded successfully.
-        """
-        pdf_filename = self._extract_pdf_filename(order.pdf_url)
-        if not pdf_filename:
-            return False
-
-        # Clean filename for archive
-        clean_filename = pdf_filename.lstrip("/").replace("/", "_")
-
-        # Check if PDF already exists
-        if self.archive_manager.file_exists(
-            year=year,
-            state_code=str(state.code),
-            district_code=str(district.code),
-            complex_code=str(complex_.code),
-            archive_type="orders",
-            filename=clean_filename,
-        ):
-            return True  # Already exists, count as success
-
-        # Download PDF with retry
-        temp_path = (
-            self.local_dir
-            / "temp"
-            / f"{threading.current_thread().name}_{clean_filename}"
-        )
-        temp_path.parent.mkdir(parents=True, exist_ok=True)
-
-        success = False
-        for attempt in range(MAX_PDF_RETRIES):
-            time.sleep(self.delay)
-
-            try:
-                download_result = self.client.download_pdf(
-                    pdf_url=order.pdf_url,
-                    output_path=str(temp_path),
-                )
-
-                if download_result and temp_path.exists():
-                    # Verify it's a valid PDF (check magic bytes)
-                    with open(temp_path, "rb") as f:
-                        header = f.read(4)
-
-                    if header == b"%PDF":
-                        success = True
-                        if attempt > 0:
-                            self._update_stats(pdfs_retried=1)
-                            logger.debug(
-                                f"PDF download succeeded on retry {attempt + 1}: {pdf_filename}"
-                            )
-                        break
-                    else:
-                        logger.warning(
-                            f"Invalid PDF content (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename}"
-                        )
-                        if temp_path.exists():
-                            temp_path.unlink()
-                else:
-                    logger.debug(
-                        f"PDF download failed (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename}"
-                    )
-
-            except Exception as e:
-                logger.debug(
-                    f"PDF download error (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename} - {e}"
-                )
-
-            if attempt < MAX_PDF_RETRIES - 1:
-                # Exponential backoff
-                wait_time = (2**attempt) + (0.5 * attempt)
-                time.sleep(wait_time)
-
-        if success and temp_path.exists():
-            # Read PDF content
-            with open(temp_path, "rb") as f:
-                pdf_content = f.read()
-            original_size = len(pdf_content)
-
-            # Compress PDF if enabled
-            if self.compress_pdfs:
-                try:
-                    compressed_content = compress_pdf_bytes(
-                        pdf_content, self.local_dir / "temp"
-                    )
-                    if len(compressed_content) < original_size:
-                        saved = original_size - len(compressed_content)
-                        self._update_stats(bytes_saved=saved, pdfs_compressed=1)
-                        pdf_content = compressed_content
-                except Exception as e:
-                    logger.debug(f"PDF compression failed: {e}")
-
-            # Add to archive
-            self.archive_manager.add_to_archive(
-                year=year,
-                state_code=str(state.code),
-                district_code=str(district.code),
-                complex_code=str(complex_.code),
-                archive_type="orders",
-                filename=clean_filename,
-                content=pdf_content,
-            )
-            self._update_stats(pdfs_downloaded=1)
-
-            # Clean up temp file
-            try:
-                temp_path.unlink()
-            except Exception:
-                pass
-            return True
-        else:
-            logger.warning(
-                f"Failed to download PDF after {MAX_PDF_RETRIES} attempts: {pdf_filename}"
-            )
-            self._update_stats(pdfs_failed=1)
-            # Clean up temp file if it exists
-            try:
-                if temp_path.exists():
-                    temp_path.unlink()
-            except Exception:
-                pass
-            return False
-
     def scrape_case(
         self,
         case: Case,
@@ -503,8 +279,9 @@ class MobileScraper:
         year: int,
     ) -> bool:
         """
-        Scrape a single case: get history, download PDFs, save metadata.
+        Scrape a single case: get history, save metadata.
 
+        PDF downloads are handled separately by Stage 2 (pdf_stage.py).
         Returns True if case was processed successfully.
         """
         # Check if already processed
@@ -522,9 +299,10 @@ class MobileScraper:
 
         time.sleep(self.delay)
 
-        # Get case history
+        # Get case history (uses per-thread client)
+        worker_client = self._get_worker_client()
         history = self._retry_with_backoff(
-            self.client.get_case_history,
+            worker_client.get_case_history,
             state_code=state.code,
             dist_code=district.code,
             court_code=case.court_code,
@@ -532,23 +310,27 @@ class MobileScraper:
         )
 
         if not history:
-            logger.debug(f"Failed to get history for case {case.case_no}")
-            self._update_stats(errors=1)
+            logger.warning(f"Failed to get history for case {case.case_no} (state={state.code} district={district.code})")
+            self._update_stats(history_failed=1)
+            with self._failed_lock:
+                self._failed_operations.append({
+                    "type": "history",
+                    "state": state.code,
+                    "district": district.code,
+                    "complex": complex_.code,
+                    "court_code": case.court_code,
+                    "case_no": case.case_no,
+                    "year": year,
+                })
             return False
 
         # Extract orders
-        final_orders, interim_orders = self.client.get_orders_from_history(history)
+        final_orders, interim_orders = worker_client.get_orders_from_history(history)
 
         # Build metadata
         metadata = self._build_case_metadata(
             case, state, district, complex_, history, final_orders, interim_orders
         )
-
-        # Download PDFs with retry logic
-        all_orders = final_orders + interim_orders
-        for order in all_orders:
-            if order.pdf_url:
-                self._download_pdf_with_retry(order, year, state, district, complex_)
 
         # Save metadata to archive
         metadata_json = json.dumps(metadata, ensure_ascii=False, indent=2)
@@ -580,10 +362,20 @@ class MobileScraper:
         if self._interrupted:
             return (0, 0)
 
+        # Skip if this search was already completed (unless --verify)
+        if (
+            not self.verify
+            and self._checkpoint
+            and self._checkpoint.is_completed(task.case_type_code, task.year, task.status)
+        ):
+            self._update_stats(searches_skipped=1)
+            return (0, 0)
+
         time.sleep(self.delay)
 
+        worker_client = self._get_worker_client()
         cases = self._retry_with_backoff(
-            self.client.search_cases_by_type,
+            worker_client.search_cases_by_type,
             state_code=state.code,
             dist_code=district.code,
             court_code=complex_.njdg_est_code,
@@ -592,7 +384,28 @@ class MobileScraper:
             pending_disposed=task.status,
         )
 
+        if cases is None:
+            # API failure after retries — record for later retry (don't checkpoint)
+            self._update_stats(searches_failed=1)
+            with self._failed_lock:
+                self._failed_operations.append({
+                    "type": "search",
+                    "state": state.code,
+                    "district": district.code,
+                    "complex": complex_.code,
+                    "court_code": complex_.njdg_est_code,
+                    "case_type": task.case_type_code,
+                    "case_type_name": task.case_type_name,
+                    "year": task.year,
+                    "status": task.status,
+                })
+            return (0, 0)
+
         if not cases:
+            self._update_stats(searches_empty=1)
+            # Checkpoint the empty result so we skip it next time
+            if self._checkpoint:
+                self._checkpoint.record(task.case_type_code, task.year, task.status, 0)
             return (0, 0)
 
         cases_found = len(cases)
@@ -609,6 +422,10 @@ class MobileScraper:
                 logger.debug(f"Error processing case {case.case_no}: {e}")
                 self._update_stats(errors=1)
 
+        # Checkpoint only if all cases were processed (no interrupt)
+        if not self._interrupted and self._checkpoint:
+            self._checkpoint.record(task.case_type_code, task.year, task.status, cases_found)
+
         return (cases_found, processed)
 
     def scrape_complex(
@@ -624,6 +441,18 @@ class MobileScraper:
 
         Returns number of cases processed.
         """
+        # Load search checkpoints for this complex
+        self._checkpoint = SearchCheckpoint(
+            s3_bucket=self.s3_bucket,
+            local_dir=self.local_dir,
+            state_code=str(state.code),
+            district_code=str(district.code),
+            complex_code=str(complex_.code),
+            s3_client=self.archive_manager.s3 if self.archive_manager else None,
+            local_only=self.local_only,
+        )
+        self._checkpoint.load()
+
         # Get case types
         time.sleep(self.delay)
         case_types = self._retry_with_backoff(
@@ -741,6 +570,14 @@ class MobileScraper:
                         complex_code=str(complex_.code),
                     )
 
+                # Flush search checkpoints after each year
+                if self._checkpoint:
+                    self._checkpoint.flush()
+
+        # Final flush (e.g. from interrupt mid-year)
+        if self._checkpoint:
+            self._checkpoint.flush()
+
         logger.info(
             f"    Complex done: {total_found} cases found, {total_processed} processed"
         )
@@ -773,13 +610,14 @@ class MobileScraper:
         years = list(range(end_year, start_year - 1, -1))  # Recent years first
 
         print("\n" + "=" * 60)
-        print("MOBILE API SCRAPER")
+        print("METADATA STAGE (Stage 1)")
         print("=" * 60)
         print(f"  Years: {start_year} to {end_year}")
         print(f"  Filter: {pending_disposed}")
         print(f"  Workers: {self.max_workers}")
         print(f"  S3 Bucket: {self.s3_bucket}")
         print(f"  Local Only: {self.local_only}")
+        print(f"  Verify Mode: {self.verify}")
         print("=" * 60 + "\n")
 
         # Initialize session
@@ -916,7 +754,7 @@ class MobileScraper:
                             complexes_pbar.set_postfix(
                                 {
                                     "cases": self.stats["cases_processed"],
-                                    "pdfs": self.stats["pdfs_downloaded"],
+                                    "skip": self.stats["cases_skipped"],
                                     "fail": fail_pct,
                                     "conn_err": self.stats["connection_errors"],
                                 }
@@ -943,82 +781,48 @@ class MobileScraper:
         """Print scraping summary."""
         print("\n" + "=" * 60)
         if self._interrupted:
-            print("SCRAPING INTERRUPTED - Archives saved properly")
+            print("METADATA STAGE INTERRUPTED - Archives saved properly")
         else:
-            print("SCRAPING COMPLETE")
+            print("METADATA STAGE COMPLETE")
         print("=" * 60)
         print(f"States processed:     {self.stats['states_processed']}")
         print(f"Districts processed:  {self.stats['districts_processed']}")
         print(f"Complexes processed:  {self.stats['complexes_processed']}")
         print(f"Case types processed: {self.stats['case_types_processed']}")
+        print(f"Searches skipped:     {self.stats['searches_skipped']}")
+        print(f"Searches empty:       {self.stats['searches_empty']}")
+        print(f"Searches failed:      {self.stats['searches_failed']}")
         print(f"Cases found:          {self.stats['cases_found']}")
         print(f"Cases processed:      {self.stats['cases_processed']}")
         print(f"Cases skipped:        {self.stats['cases_skipped']}")
-        print(f"PDFs downloaded:      {self.stats['pdfs_downloaded']}")
-        if self.stats["pdfs_retried"] > 0:
-            print(f"PDFs retried:         {self.stats['pdfs_retried']}")
-        if self.compress_pdfs:
-            print(f"PDFs compressed:      {self.stats['pdfs_compressed']}")
-            saved_mb = self.stats["bytes_saved"] / (1024 * 1024)
-            print(f"Space saved:          {saved_mb:.2f} MB")
-        print(f"PDFs failed:          {self.stats['pdfs_failed']}")
+        print(f"History failed:       {self.stats['history_failed']}")
         print(f"API retries:          {self.stats['api_retries']}")
         print(f"API failures:         {self.stats['api_failures']}")
         print(f"Connection errors:    {self.stats['connection_errors']}")
-        total_calls = (
-            self.stats["cases_processed"]
-            + self.stats["cases_skipped"]
-            + self.stats["api_failures"]
-        )
-        if total_calls > 0:
-            print(f"Failure rate:         {self.stats['api_failures'] / total_calls * 100:.1f}%")
         print(f"Errors:               {self.stats['errors']}")
 
         if self.stats["start_time"] and self.stats["end_time"]:
             start = datetime.fromisoformat(self.stats["start_time"])
             end = datetime.fromisoformat(self.stats["end_time"])
-            duration = end - start
-            print(f"Duration:             {duration}")
+            print(f"Duration:             {end - start}")
+
+        failed_count = len(self._failed_operations)
+        if failed_count > 0:
+            print(f"\n⚠ {failed_count} failed operations logged to failures file — re-run to retry")
+        print("\nRun pdf_stage.py to download PDFs from the collected metadata.")
 
 
 def main():
     """Command line interface."""
     parser = argparse.ArgumentParser(
-        description="eCourts Mobile API Scraper with S3 Sync"
+        description="Stage 1: Metadata Scraper (eCourts Mobile API)"
     )
-
+    add_common_args(parser)
     parser.add_argument(
-        "--state",
+        "--max-workers",
         type=int,
-        action="append",
-        dest="states",
-        help="State code to scrape (can be specified multiple times)",
-    )
-    parser.add_argument(
-        "--district",
-        type=int,
-        action="append",
-        dest="districts",
-        help="District code to scrape (can be specified multiple times)",
-    )
-    parser.add_argument(
-        "--complex",
-        type=str,
-        action="append",
-        dest="complexes",
-        help="Complex code to scrape (can be specified multiple times)",
-    )
-    parser.add_argument(
-        "--start-year",
-        type=int,
-        default=2020,
-        help="Start year (default: 2020)",
-    )
-    parser.add_argument(
-        "--end-year",
-        type=int,
-        default=2025,
-        help="End year (default: 2025)",
+        default=DEFAULT_MAX_WORKERS,
+        help=f"Number of concurrent workers for case type processing (default: {DEFAULT_MAX_WORKERS})",
     )
     parser.add_argument(
         "--filter",
@@ -1027,40 +831,10 @@ def main():
         help="Case status filter (default: Both)",
     )
     parser.add_argument(
-        "--delay",
-        type=float,
-        default=DEFAULT_DELAY,
-        help=f"Delay between API calls in seconds (default: {DEFAULT_DELAY})",
-    )
-    parser.add_argument(
-        "--max-workers",
-        type=int,
-        default=DEFAULT_MAX_WORKERS,
-        help=f"Number of concurrent workers for case type processing (default: {DEFAULT_MAX_WORKERS})",
-    )
-    parser.add_argument(
-        "--local-only",
+        "--verify",
         action="store_true",
-        help="Don't upload to S3, keep files locally",
+        help="Re-run all searches ignoring checkpoints (catches new cases filed since last run)",
     )
-    parser.add_argument(
-        "--s3-bucket",
-        type=str,
-        default=S3_BUCKET,
-        help=f"S3 bucket name (default: {S3_BUCKET})",
-    )
-    parser.add_argument(
-        "--local-dir",
-        type=str,
-        default=str(LOCAL_DIR),
-        help=f"Local directory for temp files (default: {LOCAL_DIR})",
-    )
-    parser.add_argument(
-        "--no-compress",
-        action="store_true",
-        help="Disable PDF compression (Ghostscript)",
-    )
-
     args = parser.parse_args()
 
     scraper = MobileScraper(
@@ -1069,7 +843,7 @@ def main():
         delay=args.delay,
         max_workers=args.max_workers,
         local_only=args.local_only,
-        compress_pdfs=not args.no_compress,
+        verify=args.verify,
     )
 
     stats = scraper.scrape(
@@ -1087,6 +861,13 @@ def main():
     with open(stats_file, "w") as f:
         json.dump(stats, f, indent=2)
     print(f"\nStats saved to {stats_file}")
+
+    # Save failures for retry
+    if scraper._failed_operations:
+        failures_file = Path(args.local_dir) / "scrape_failures.json"
+        with open(failures_file, "w") as f:
+            json.dump(scraper._failed_operations, f, indent=2)
+        print(f"Failures saved to {failures_file} ({len(scraper._failed_operations)} operations)")
 
 
 if __name__ == "__main__":

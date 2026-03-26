@@ -11,13 +11,15 @@ import io
 import json
 import logging
 import os
+import re
 import tarfile
+import tempfile
 import threading
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Iterator, List, Optional, Tuple
 
 import boto3
 
@@ -386,6 +388,23 @@ class S3ArchiveManager:
 
         except self.s3.exceptions.ClientError as e:
             if "NoSuchKey" in str(e) or "404" in str(e):
+                # Fallback: try legacy "orders" index when looking for "data"
+                if archive_type == "data":
+                    legacy_key = f"{s3_dir}orders.index.json"
+                    try:
+                        response = self.s3.get_object(Bucket=self.s3_bucket, Key=legacy_key)
+                        data = json.loads(response["Body"].read().decode("utf-8"))
+                        index = IndexFileV2.from_dict(data)
+                        index.year = year
+                        index.state_code = state_code
+                        index.district_code = district_code
+                        index.complex_code = complex_code
+                        index.archive_type = "data"
+                        logger.debug(f"Loaded legacy orders index as data: {legacy_key}")
+                        return index
+                    except Exception:
+                        pass  # Fall through to empty index
+
                 # Create new empty index
                 now = ist_now_iso()
                 return IndexFileV2(
@@ -1083,6 +1102,158 @@ class S3ArchiveManager:
             )
 
         return flushed_count
+
+    def iter_archive_files(
+        self,
+        year: int,
+        state_code: str,
+        district_code: str,
+        complex_code: str,
+        archive_type: str,
+    ) -> Iterator[Tuple[str, bytes]]:
+        """
+        Iterate over all files in an archive (across all parts).
+
+        Downloads tar files from S3 (or reads locally) and streams contents.
+        Yields (filename, content_bytes) tuples.
+        """
+        key = (year, state_code, district_code, complex_code, archive_type)
+
+        # Load index to discover parts
+        if key not in self.indexes:
+            self.indexes[key] = self._load_index_from_s3(
+                year, state_code, district_code, complex_code, archive_type
+            )
+
+        index = self.indexes[key]
+        if index.file_count == 0:
+            return
+
+        s3_dir = self._get_s3_dir(
+            year, state_code, district_code, complex_code, archive_type
+        )
+        local_dir = self._get_local_dir(
+            year, state_code, district_code, complex_code
+        )
+
+        # Collect tar filenames from parts
+        tar_names = []
+        for part in index.parts:
+            tar_names.append(part.name)
+
+        # Also check for main archive if no parts listed (legacy indexes)
+        if not tar_names:
+            tar_names.append(f"{archive_type}.tar")
+
+        for tar_name in tar_names:
+            local_path = local_dir / tar_name
+            tmp_path = None
+
+            try:
+                if local_path.exists():
+                    # Read from local filesystem
+                    tar_path = local_path
+                elif not self.local_only and self.s3:
+                    # Download from S3 to temp file
+                    s3_key = f"{s3_dir}{tar_name}"
+                    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".tar")
+                    os.close(tmp_fd)
+                    try:
+                        self.s3.download_file(self.s3_bucket, s3_key, tmp_path)
+                    except Exception as e:
+                        logger.warning(f"Failed to download {s3_key}: {e}")
+                        continue
+                    tar_path = Path(tmp_path)
+                else:
+                    continue
+
+                with tarfile.open(str(tar_path), "r") as tf:
+                    for member in tf.getmembers():
+                        if not member.isfile():
+                            continue
+                        # Sanitize: reject path traversal attempts
+                        if member.name.startswith("/") or ".." in member.name.split("/"):
+                            logger.warning(f"Skipping unsafe tar member: {member.name}")
+                            continue
+                        f = tf.extractfile(member)
+                        if f is None:
+                            continue
+                        yield (member.name, f.read())
+
+            finally:
+                # Clean up temp file
+                if tmp_path and os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+
+    @staticmethod
+    def list_archive_locations(
+        s3_bucket: str,
+        archive_type: str = "metadata",
+        s3_prefix: str = "",
+        year_filter: Optional[int] = None,
+        state_filter: Optional[str] = None,
+        district_filter: Optional[str] = None,
+    ) -> List[Dict]:
+        """
+        List all (year, state, district, complex) tuples that have archives in S3.
+
+        Returns list of dicts with keys: year, state, district, complex, key.
+        """
+        s3 = boto3.client("s3")
+        locations = []
+
+        if archive_type == "metadata":
+            prefix = f"{s3_prefix}metadata/tar/"
+        else:
+            prefix = f"{s3_prefix}data/tar/"
+
+        paginator = s3.get_paginator("list_objects_v2")
+        seen = set()
+
+        for page in paginator.paginate(Bucket=s3_bucket, Prefix=prefix):
+            if "Contents" not in page:
+                continue
+
+            for obj in page["Contents"]:
+                key = obj["Key"]
+                if not key.endswith(".tar"):
+                    continue
+
+                match = re.search(
+                    r"year=(\d{4})/state=(\w+)/district=(\w+)/complex=(\w+)/",
+                    key,
+                )
+                if not match:
+                    continue
+
+                year = match.group(1)
+                state = match.group(2)
+                district = match.group(3)
+                complex_code = match.group(4)
+
+                # Apply filters
+                if year_filter and year != str(year_filter):
+                    continue
+                if state_filter and state != state_filter:
+                    continue
+                if district_filter and district != district_filter:
+                    continue
+
+                loc_key = (year, state, district, complex_code)
+                if loc_key in seen:
+                    continue
+                seen.add(loc_key)
+
+                locations.append(
+                    {
+                        "year": year,
+                        "state": state,
+                        "district": district,
+                        "complex": complex_code,
+                    }
+                )
+
+        return locations
 
     def cleanup_empty_directories(self):
         """Remove directories that have no files after processing"""

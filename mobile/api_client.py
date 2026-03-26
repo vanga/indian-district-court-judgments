@@ -290,8 +290,15 @@ class MobileAPIClient:
                         if isinstance(decrypted, dict) and decrypted.get("status") == "N":
                             msg = decrypted.get("Msg") or decrypted.get("msg")
                             if msg == "Not in session !":
-                                # Session expired, retry without auth
+                                # Session expired — re-initialize to get a fresh token
+                                logger.debug("Session expired, re-initializing...")
+                                self._initialized = False
                                 self.jwt_token = ""
+                                self.initialize_session()
+                                # Rebuild auth header with new token for retry
+                                if self.jwt_token:
+                                    encrypted_token = encrypt_data_cbc(self.jwt_token)
+                                    headers["Authorization"] = f"Bearer {encrypted_token}"
                                 continue
                             return None
 
@@ -324,16 +331,19 @@ class MobileAPIClient:
         if not result or "states" not in result:
             return []
 
-        return [
-            State(
-                code=s["state_code"],
-                name=s["state_name"],
-                bilingual=s.get("bilingual") == "Y",
-                hindi_name=s.get("state_name_hindi", ""),
-                national_code=s.get("nationalstate_code", ""),
-            )
-            for s in result["states"]
-        ]
+        states = []
+        for s in result["states"]:
+            try:
+                states.append(State(
+                    code=int(s["state_code"]),
+                    name=str(s["state_name"]),
+                    bilingual=s.get("bilingual") == "Y",
+                    hindi_name=s.get("state_name_hindi", ""),
+                    national_code=s.get("nationalstate_code", ""),
+                ))
+            except (KeyError, ValueError, TypeError) as e:
+                logger.warning(f"Skipping malformed state entry: {e}")
+        return states
 
     def get_districts(self, state_code: int) -> list[District]:
         """Get districts for a state."""
@@ -348,14 +358,17 @@ class MobileAPIClient:
         # Key can be "district" or "districts"
         districts_data = result.get("districts") or result.get("district") or []
 
-        return [
-            District(
-                code=d["dist_code"],
-                name=d["dist_name"],
-                state_code=state_code,
-            )
-            for d in districts_data
-        ]
+        districts = []
+        for d in districts_data:
+            try:
+                districts.append(District(
+                    code=int(d["dist_code"]),
+                    name=str(d["dist_name"]),
+                    state_code=state_code,
+                ))
+            except (KeyError, ValueError, TypeError) as e:
+                logger.warning(f"Skipping malformed district entry: {e}")
+        return districts
 
     def get_court_complexes(self, state_code: int, dist_code: int) -> list[CourtComplex]:
         """Get court complexes for a district."""
@@ -373,16 +386,17 @@ class MobileAPIClient:
 
         complexes = []
         for c in result["courtComplex"]:
-            # njdg_est_code is a comma-separated list of court codes in this complex
-            # Keep the full string for use in search queries
-            njdg_code = str(c["njdg_est_code"]).strip()
-            complexes.append(CourtComplex(
-                code=c["complex_code"],
-                name=c["court_complex_name"],
-                njdg_est_code=njdg_code,
-                state_code=state_code,
-                district_code=dist_code,
-            ))
+            try:
+                njdg_code = str(c["njdg_est_code"]).strip()
+                complexes.append(CourtComplex(
+                    code=str(c["complex_code"]),
+                    name=str(c["court_complex_name"]),
+                    njdg_est_code=njdg_code,
+                    state_code=state_code,
+                    district_code=dist_code,
+                ))
+            except (KeyError, ValueError, TypeError) as e:
+                logger.warning(f"Skipping malformed court complex entry: {e}")
         return complexes
 
     def get_case_types(
@@ -490,18 +504,23 @@ class MobileAPIClient:
         if isinstance(result, dict):
             for court_key, court_data in result.items():
                 if isinstance(court_data, dict) and "caseNos" in court_data:
-                    # Get court_code from the court entry, not individual case
                     entry_court_code = str(court_data.get("court_code", ""))
                     for c in court_data["caseNos"]:
-                        cases.append(Case(
-                            case_no=c.get("case_no") or c.get("filing_no", ""),
-                            cino=c.get("cino", ""),
-                            case_type=c.get("type_name", ""),
-                            case_number=c.get("case_no2", ""),
-                            reg_year=c.get("reg_year", ""),
-                            petitioner=c.get("petnameadArr", ""),
-                            court_code=entry_court_code,
-                        ))
+                        try:
+                            case_no = c.get("case_no") or c.get("filing_no", "")
+                            if not case_no:
+                                continue
+                            cases.append(Case(
+                                case_no=str(case_no),
+                                cino=str(c.get("cino", "")),
+                                case_type=str(c.get("type_name", "")),
+                                case_number=str(c.get("case_no2", "")),
+                                reg_year=str(c.get("reg_year", "")),
+                                petitioner=str(c.get("petnameadArr", "")),
+                                court_code=entry_court_code,
+                            ))
+                        except (KeyError, ValueError, TypeError) as e:
+                            logger.warning(f"Skipping malformed case entry: {e}")
 
         return cases
 

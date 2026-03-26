@@ -388,23 +388,6 @@ class S3ArchiveManager:
 
         except self.s3.exceptions.ClientError as e:
             if "NoSuchKey" in str(e) or "404" in str(e):
-                # Fallback: try legacy "orders" index when looking for "data"
-                if archive_type == "data":
-                    legacy_key = f"{s3_dir}orders.index.json"
-                    try:
-                        response = self.s3.get_object(Bucket=self.s3_bucket, Key=legacy_key)
-                        data = json.loads(response["Body"].read().decode("utf-8"))
-                        index = IndexFileV2.from_dict(data)
-                        index.year = year
-                        index.state_code = state_code
-                        index.district_code = district_code
-                        index.complex_code = complex_code
-                        index.archive_type = "data"
-                        logger.debug(f"Loaded legacy orders index as data: {legacy_key}")
-                        return index
-                    except Exception:
-                        pass  # Fall through to empty index
-
                 # Create new empty index
                 now = ist_now_iso()
                 return IndexFileV2(

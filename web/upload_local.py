@@ -131,7 +131,7 @@ def upload_local_files(
             continue
 
         # Determine archive type from filename
-        if tar_name.startswith("data") or tar_name.startswith("orders"):
+        if tar_name.startswith("data"):
             archive_type = "data"
             s3_path_prefix = "data/tar"
         elif tar_name.startswith("metadata"):
@@ -140,7 +140,7 @@ def upload_local_files(
         elif tar_name.startswith("part-"):
             # Part files - determine type from directory contents
             sibling_files = list(tar_path.parent.glob("*.tar"))
-            if any(f.name.startswith(("data", "orders")) for f in sibling_files):
+            if any(f.name.startswith("data") for f in sibling_files):
                 archive_type = "data"
                 s3_path_prefix = "data/tar"
             else:
@@ -177,7 +177,7 @@ def upload_local_files(
         logger.info(f"  ✓ Uploaded {tar_name}")
 
         # Create and upload index file (only for main archive, not parts)
-        if tar_name in ["orders.tar", "metadata.tar"]:
+        if tar_name in ["data.tar", "metadata.tar"]:
             index = create_index_for_tar(
                 tar_path, archive_type, year, state_code, district_code, complex_code
             )

@@ -1288,7 +1288,7 @@ class Downloader:
             self.task.state_code,
             self.task.district_code,
             self.task.complex_code,
-            "orders",
+            "data",
             pdf_filename,
         ):
             # Download PDF
@@ -1303,7 +1303,7 @@ class Downloader:
                     self.task.state_code,
                     self.task.district_code,
                     self.task.complex_code,
-                    "orders",
+                    "data",
                     pdf_filename,
                     pdf_content,
                 )

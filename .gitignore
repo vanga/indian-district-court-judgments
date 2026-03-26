@@ -173,6 +173,11 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Sensitive files
+*.apk
+*.idsig
+*.jks
+
 # Project-specific
 local_dc_judgments_data/
 captcha-tmp/

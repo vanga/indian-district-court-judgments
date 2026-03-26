@@ -89,3 +89,4 @@ Telangana=29 (Mancherial=22, Rangareddy=6, Hyderabad=5). Full list in `courts.cs
 - SSL verification is disabled for eCourts API (`verify=False`).
 - The mobile API has rate limiting — always include delays between requests (default 0.3s).
 - Archives use uncompressed TAR format for speed.
+- AWS profile: `dattam-od` (use `AWS_PROFILE=dattam-od` when running S3 operations).

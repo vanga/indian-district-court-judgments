@@ -163,9 +163,13 @@ class MobileScraper:
             "pdfs_retried": 0,
             "bytes_saved": 0,
             "errors": 0,
+            "api_retries": 0,
+            "api_failures": 0,
+            "connection_errors": 0,
             "start_time": None,
             "end_time": None,
         }
+        self._last_status_time = time.time()
 
         # Set up signal handler for clean shutdown
         signal.signal(signal.SIGINT, self._handle_interrupt)
@@ -193,14 +197,19 @@ class MobileScraper:
             try:
                 result = func(*args, **kwargs)
                 if result is not None:
+                    if attempt > 0:
+                        self._update_stats(api_retries=attempt)
                     return result
             except Exception as e:
                 logger.warning(f"Attempt {attempt + 1}/{self.max_retries} failed: {e}")
+                if "ConnectionError" in type(e).__name__ or "RemoteDisconnected" in str(e):
+                    self._update_stats(connection_errors=1)
 
             if attempt < self.max_retries - 1:
                 wait_time = (2**attempt) + (0.1 * attempt)
                 time.sleep(wait_time)
 
+        self._update_stats(api_failures=1)
         return None
 
     def _ensure_session(self) -> bool:
@@ -229,6 +238,51 @@ class MobileScraper:
             logger.error("All session init attempts failed")
             return False
         return True
+
+    def _log_periodic_status(self):
+        """Log a status summary every 5 minutes."""
+        now = time.time()
+        if now - self._last_status_time < 300:
+            return
+        self._last_status_time = now
+
+        total_api_calls = (
+            self.stats["cases_processed"]
+            + self.stats["cases_skipped"]
+            + self.stats["api_failures"]
+        )
+        failure_rate = (
+            (self.stats["api_failures"] / total_api_calls * 100)
+            if total_api_calls > 0
+            else 0
+        )
+        conn_rate = (
+            (self.stats["connection_errors"] / max(total_api_calls, 1) * 100)
+        )
+
+        elapsed = ""
+        if self.stats["start_time"]:
+            start = datetime.fromisoformat(self.stats["start_time"])
+            elapsed = f" | elapsed: {datetime.now(IST) - start}"
+
+        logger.info(
+            f"\n{'=' * 70}\n"
+            f"STATUS | states: {self.stats['states_processed']} | "
+            f"districts: {self.stats['districts_processed']} | "
+            f"complexes: {self.stats['complexes_processed']}\n"
+            f"CASES  | found: {self.stats['cases_found']} | "
+            f"processed: {self.stats['cases_processed']} | "
+            f"skipped: {self.stats['cases_skipped']}\n"
+            f"PDFs   | downloaded: {self.stats['pdfs_downloaded']} | "
+            f"failed: {self.stats['pdfs_failed']} | "
+            f"retried: {self.stats['pdfs_retried']}\n"
+            f"ERRORS | api_retries: {self.stats['api_retries']} | "
+            f"api_failures: {self.stats['api_failures']} | "
+            f"conn_errors: {self.stats['connection_errors']} | "
+            f"failure_rate: {failure_rate:.1f}% | "
+            f"conn_error_rate: {conn_rate:.1f}%{elapsed}\n"
+            f"{'=' * 70}"
+        )
 
     def _extract_pdf_filename(self, pdf_url: str) -> Optional[str]:
         """Extract PDF filename from encrypted URL params."""
@@ -849,12 +903,25 @@ class MobileScraper:
                                 complex_code=str(complex_.code),
                             )
                             # Update postfix with current stats
+                            total_calls = (
+                                self.stats["cases_processed"]
+                                + self.stats["cases_skipped"]
+                                + self.stats["api_failures"]
+                            )
+                            fail_pct = (
+                                f"{self.stats['api_failures'] / total_calls * 100:.0f}%"
+                                if total_calls > 0
+                                else "0%"
+                            )
                             complexes_pbar.set_postfix(
                                 {
                                     "cases": self.stats["cases_processed"],
                                     "pdfs": self.stats["pdfs_downloaded"],
+                                    "fail": fail_pct,
+                                    "conn_err": self.stats["connection_errors"],
                                 }
                             )
+                            self._log_periodic_status()
                         except Exception as e:
                             logger.error(
                                 f"Error processing complex {complex_.name}: {e}"
@@ -895,6 +962,16 @@ class MobileScraper:
             saved_mb = self.stats["bytes_saved"] / (1024 * 1024)
             print(f"Space saved:          {saved_mb:.2f} MB")
         print(f"PDFs failed:          {self.stats['pdfs_failed']}")
+        print(f"API retries:          {self.stats['api_retries']}")
+        print(f"API failures:         {self.stats['api_failures']}")
+        print(f"Connection errors:    {self.stats['connection_errors']}")
+        total_calls = (
+            self.stats["cases_processed"]
+            + self.stats["cases_skipped"]
+            + self.stats["api_failures"]
+        )
+        if total_calls > 0:
+            print(f"Failure rate:         {self.stats['api_failures'] / total_calls * 100:.1f}%")
         print(f"Errors:               {self.stats['errors']}")
 
         if self.stats["start_time"] and self.stats["end_time"]:

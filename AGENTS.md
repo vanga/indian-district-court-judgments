@@ -24,7 +24,7 @@ uv run python web/download.py
 uv run ruff check .
 ```
 
-There are no automated tests. The `test_*.py` files in `mobile/` are manual integration scripts for debugging the API, not test suites.
+There are no automated tests.
 
 ## Architecture
 
@@ -36,7 +36,12 @@ There are no automated tests. The `test_*.py` files in `mobile/` are manual inte
 ### Shared Components
 
 - **`archive_manager.py`** (repo root) — Both scrapers use this for TAR archive creation, S3 uploads, and index tracking. Archives are partitioned at 1GB. Imported by mobile scraper via `sys.path` manipulation.
+- **`gs.py`** (repo root) — PDF compression via Ghostscript. Used by both scrapers.
 - **`courts.csv`** — All 3,567 court complexes with state/district/complex codes.
+
+### Reference Materials
+
+- **`reference/traffic/`** — Captured HTTP traffic, Postman collection, and OpenAPI spec from reverse engineering the mobile API.
 
 ### Mobile API Encryption Flow
 

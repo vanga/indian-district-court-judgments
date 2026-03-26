@@ -47,7 +47,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from archive_manager import S3ArchiveManager
 from src.captcha_solver.main import get_text
 from src.utils.court_utils import CourtComplex, load_courts_csv
-from src.gs import check_ghostscript_available, compress_pdf_if_enabled
+from gs import check_ghostscript_available, compress_pdf_if_enabled
 
 # Configure logging
 root_logger = logging.getLogger()

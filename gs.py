@@ -141,3 +141,42 @@ def compress_pdf_bytes(pdf_content: bytes, temp_dir: Path) -> bytes:
             input_path.unlink()
         if output_path.exists():
             output_path.unlink()
+
+
+def compress_pdf_if_enabled(pdf_path: Path, compression_available: bool) -> Path:
+    """
+    Compress a PDF file if compression is enabled and available.
+    Returns the path to the final PDF (original or compressed).
+    """
+    if not compression_available:
+        return pdf_path
+
+    try:
+        # Create temporary compressed file
+        compressed_path = pdf_path.with_suffix(".compressed.pdf")
+
+        # Compress the PDF
+        success, message = compress_pdf(pdf_path, compressed_path)
+
+        if success and compressed_path.exists():
+            original_size = pdf_path.stat().st_size
+            compressed_size = compressed_path.stat().st_size
+
+            # Only replace if compressed version is smaller
+            if compressed_size < original_size:
+                # Replace original with compressed version
+                pdf_path.unlink()  # Remove original
+                compressed_path.rename(pdf_path)  # Rename compressed to original name
+                return pdf_path
+            else:
+                # Keep original, remove compressed version
+                compressed_path.unlink()
+                return pdf_path
+        else:
+            # Compression failed, keep original
+            if compressed_path.exists():
+                compressed_path.unlink()
+            return pdf_path
+
+    except Exception:
+        return pdf_path

@@ -329,9 +329,13 @@ class PDFDownloadStage(ScraperBase):
                     self._update_stats(pdfs_no_filename=1)
                     continue
 
+                # Use formatted caseno from metadata (required by PDF endpoint)
+                # Falls back to numeric case_no for old metadata without pdf_caseno
+                pdf_caseno = order.get("pdf_caseno", case_no)
+
                 if self._download_pdf_with_retry(
                     pdf_filename=pdf_filename,
-                    case_no=case_no,
+                    case_no=pdf_caseno,
                     court_code=court_code,
                     year_str=year_str,
                     state_code_str=state_code_str,

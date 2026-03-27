@@ -80,6 +80,7 @@ class MobileScraper(ScraperBase):
         local_only: bool = False,
         immediate_upload: bool = True,
         verify: bool = False,
+        refresh_metadata: bool = False,
     ):
         super().__init__(
             client=MobileAPIClient(),
@@ -92,6 +93,7 @@ class MobileScraper(ScraperBase):
         self.local_only = local_only
         self.immediate_upload = immediate_upload
         self.verify = verify
+        self.refresh_metadata = refresh_metadata
         self._checkpoint: Optional[SearchCheckpoint] = None
 
         self.archive_manager: Optional[S3ArchiveManager] = None
@@ -193,8 +195,8 @@ class MobileScraper(ScraperBase):
             f"{'=' * 70}"
         )
 
-    def _extract_pdf_filename(self, pdf_url: str) -> Optional[str]:
-        """Extract PDF filename from encrypted URL params."""
+    def _extract_pdf_params(self, pdf_url: str) -> Optional[dict]:
+        """Extract PDF params (filename, caseno) from encrypted URL params."""
         try:
             parsed = urlparse(pdf_url)
             query = parse_qs(parsed.query)
@@ -202,7 +204,7 @@ class MobileScraper(ScraperBase):
             if params_enc:
                 params = decrypt_url_param(params_enc)
                 if isinstance(params, dict):
-                    return params.get("filename", "")
+                    return params
         except Exception:
             pass
         return None
@@ -228,9 +230,12 @@ class MobileScraper(ScraperBase):
                 "is_final": o.is_final,
             }
             if o.pdf_url:
-                filename = self._extract_pdf_filename(o.pdf_url)
-                if filename:
-                    data["pdf_filename"] = filename
+                pdf_params = self._extract_pdf_params(o.pdf_url)
+                if pdf_params:
+                    if pdf_params.get("filename"):
+                        data["pdf_filename"] = pdf_params["filename"]
+                    if pdf_params.get("caseno"):
+                        data["pdf_caseno"] = pdf_params["caseno"]
             return data
 
         return {
@@ -286,7 +291,7 @@ class MobileScraper(ScraperBase):
         """
         # Check if already processed
         metadata_filename = f"{case.case_no}.json"
-        if self.archive_manager.file_exists(
+        if not self.refresh_metadata and self.archive_manager.file_exists(
             year=year,
             state_code=str(state.code),
             district_code=str(district.code),
@@ -835,6 +840,11 @@ def main():
         action="store_true",
         help="Re-run all searches ignoring checkpoints (catches new cases filed since last run)",
     )
+    parser.add_argument(
+        "--refresh-metadata",
+        action="store_true",
+        help="Re-fetch case history and overwrite metadata (use to add pdf_caseno to old metadata)",
+    )
     args = parser.parse_args()
 
     scraper = MobileScraper(
@@ -844,6 +854,7 @@ def main():
         max_workers=args.max_workers,
         local_only=args.local_only,
         verify=args.verify,
+        refresh_metadata=args.refresh_metadata,
     )
 
     stats = scraper.scrape(

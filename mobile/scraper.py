@@ -291,6 +291,7 @@ class MobileScraper(ScraperBase):
         """Download a PDF from an order using the original pdf_url."""
         pdf_filename = self._extract_pdf_filename(order.pdf_url)
         if not pdf_filename:
+            return False
         clean_filename = pdf_filename.lstrip("/").replace("/", "_")
 
         # Check if already downloaded

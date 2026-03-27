@@ -764,7 +764,9 @@ class MobileAPIClient:
         """
         import json as json_module
 
-        # Build params
+        url = f"{self.base_url}/display_pdf.php"
+
+        # Build params (static — doesn't depend on session)
         params = {
             "filename": filename,
             "caseno": case_no,
@@ -775,29 +777,22 @@ class MobileAPIClient:
             "court_code": court_code,
             "bilingual_flag": "0",
         }
-
-        # Encrypt params using server format (IV + base64) with RESPONSE_KEY
         params_json = json_module.dumps(params)
         encrypted_params = encrypt_server_format(params_json, RESPONSE_KEY_HEX)
 
-        # Encrypt JWT token with REQUEST_KEY (standard format)
-        jwt_token = self.jwt_token if self.jwt_token else ""
-        encrypted_jwt = encrypt_data_cbc(jwt_token)
-
-        # Construct and encrypt auth value using server format with RESPONSE_KEY
-        auth_value = f"Bearer {encrypted_jwt}"
-        encrypted_auth = encrypt_server_format(auth_value, RESPONSE_KEY_HEX)
-
-        url = f"{self.base_url}/display_pdf.php"
-
-        # Include Authorization header with the same encrypted JWT
-        headers = {
-            **DEFAULT_HEADERS,
-            "Cookie": self.jsession,
-            "Authorization": f"Bearer {encrypted_jwt}",
-        }
-
         for attempt in range(retry_count):
+            # Rebuild auth each attempt so session refresh takes effect
+            jwt_token = self.jwt_token if self.jwt_token else ""
+            encrypted_jwt = encrypt_data_cbc(jwt_token)
+            auth_value = f"Bearer {encrypted_jwt}"
+            encrypted_auth = encrypt_server_format(auth_value, RESPONSE_KEY_HEX)
+
+            headers = {
+                **DEFAULT_HEADERS,
+                "Cookie": self.jsession,
+                "Authorization": f"Bearer {encrypted_jwt}",
+            }
+
             try:
                 response = self.session.get(
                     url,
@@ -823,15 +818,35 @@ class MobileAPIClient:
                                 f.write(chunk)
                         return True
                     else:
-                        # Try to decrypt error response
+                        # Check for auth error and re-initialize session
                         content = first_chunk + response.content
+                        try:
+                            error_data = json.loads(content)
+                            if isinstance(error_data, dict) and error_data.get("status") == "N":
+                                msg = error_data.get("Msg") or error_data.get("msg", "")
+                                if "UnAuthorized" in msg or "401" in str(error_data.get("status_code", "")):
+                                    logger.debug(f"PDF auth expired, re-initializing session (attempt {attempt + 1})")
+                                    self._initialized = False
+                                    self.jwt_token = ""
+                                    self.initialize_session()
+                                    continue
+                        except (json.JSONDecodeError, ValueError):
+                            pass
+
+                        # Try encrypted error response
                         if len(content) > 32:
                             try:
                                 text = content.decode('utf-8', errors='ignore').strip()
                                 if all(c in '0123456789abcdef' for c in text[:32]):
                                     decrypted = decrypt_response_cbc(text)
-                                    # Log the error for debugging
-                                    print(f"PDF download error: {decrypted}")
+                                    if isinstance(decrypted, dict) and decrypted.get("status") == "N":
+                                        msg = decrypted.get("Msg") or decrypted.get("msg", "")
+                                        if "UnAuthorized" in msg or "session" in msg.lower():
+                                            logger.debug(f"PDF auth expired (encrypted), re-initializing session (attempt {attempt + 1})")
+                                            self._initialized = False
+                                            self.jwt_token = ""
+                                            self.initialize_session()
+                                            continue
                             except Exception:
                                 pass
                         return False

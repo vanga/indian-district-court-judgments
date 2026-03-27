@@ -212,8 +212,8 @@ class MobileScraper(ScraperBase):
             f"{'=' * 70}"
         )
 
-    def _extract_pdf_params(self, pdf_url: str) -> Optional[dict]:
-        """Extract PDF params (filename, caseno) from encrypted URL params."""
+    def _extract_pdf_filename(self, pdf_url: str) -> Optional[str]:
+        """Extract PDF filename from encrypted URL params."""
         try:
             parsed = urlparse(pdf_url)
             query = parse_qs(parsed.query)
@@ -221,7 +221,7 @@ class MobileScraper(ScraperBase):
             if params_enc:
                 params = decrypt_url_param(params_enc)
                 if isinstance(params, dict):
-                    return params
+                    return params.get("filename", "")
         except Exception:
             pass
         return None
@@ -247,12 +247,9 @@ class MobileScraper(ScraperBase):
                 "is_final": o.is_final,
             }
             if o.pdf_url:
-                pdf_params = self._extract_pdf_params(o.pdf_url)
-                if pdf_params:
-                    if pdf_params.get("filename"):
-                        data["pdf_filename"] = pdf_params["filename"]
-                    if pdf_params.get("caseno"):
-                        data["pdf_caseno"] = pdf_params["caseno"]
+                filename = self._extract_pdf_filename(o.pdf_url)
+                if filename:
+                    data["pdf_filename"] = filename
             return data
 
         return {
@@ -292,11 +289,8 @@ class MobileScraper(ScraperBase):
         complex_: CourtComplex,
     ) -> bool:
         """Download a PDF from an order using the original pdf_url."""
-        pdf_params = self._extract_pdf_params(order.pdf_url)
-        if not pdf_params or not pdf_params.get("filename"):
-            return False
-
-        pdf_filename = pdf_params["filename"]
+        pdf_filename = self._extract_pdf_filename(order.pdf_url)
+        if not pdf_filename:
         clean_filename = pdf_filename.lstrip("/").replace("/", "_")
 
         # Check if already downloaded

@@ -1,24 +1,26 @@
 """
-Stage 1: Metadata Scraper (eCourts Mobile API).
+eCourts Mobile API Scraper.
 
-Searches cases and collects metadata (case history, order info) without
-downloading PDFs. PDF downloads are handled by Stage 2 (pdf_stage.py).
+Searches cases, collects metadata (case history, order info), and downloads
+PDFs. Use --no-pdfs for metadata-only scraping.
 
 FEATURES:
 - No CAPTCHA required (mobile API advantage)
-- Syncs metadata to S3 using archive_manager
+- Downloads PDFs with Ghostscript compression
+- Syncs to S3 using archive_manager
 - Robust retry logic with exponential backoff
 - Resume capability via S3 index files
+- Search checkpointing to avoid redundant API calls
 
 USAGE:
-    # Scrape metadata for a specific district
-    uv run python scraper.py --state 29 --district 22 --start-year 1950 --end-year 2025
+    # Scrape everything (metadata + PDFs)
+    uv run python scraper.py --state 29 --district 22 --start-year 2020 --end-year 2025
+
+    # Metadata only (no PDF downloads)
+    uv run python scraper.py --state 29 --district 22 --no-pdfs
 
     # Dry run (no S3 upload)
     uv run python scraper.py --state 29 --district 22 --local-only
-
-    # Then download PDFs (Stage 2)
-    uv run python pdf_stage.py --state 29 --district 22 --start-year 1950 --end-year 2025
 """
 
 import argparse
@@ -52,9 +54,17 @@ from common import (
     setup_logging, add_common_args, ScraperBase, SearchCheckpoint,
 )
 from crypto import decrypt_url_param
+from gs import check_ghostscript_available, compress_pdf_bytes
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+MAX_PDF_RETRIES = 3
+COMPRESSION_AVAILABLE = check_ghostscript_available()
+if COMPRESSION_AVAILABLE:
+    logger.info("PDF compression enabled (Ghostscript found)")
+else:
+    logger.warning("PDF compression not available (Ghostscript not found)")
 @dataclass
 class CaseTypeTask:
     """A task for processing a single case type in a complex."""
@@ -80,7 +90,8 @@ class MobileScraper(ScraperBase):
         local_only: bool = False,
         immediate_upload: bool = True,
         verify: bool = False,
-        refresh_metadata: bool = False,
+        download_pdfs: bool = True,
+        compress_pdfs: bool = True,
     ):
         super().__init__(
             client=MobileAPIClient(),
@@ -93,7 +104,8 @@ class MobileScraper(ScraperBase):
         self.local_only = local_only
         self.immediate_upload = immediate_upload
         self.verify = verify
-        self.refresh_metadata = refresh_metadata
+        self.download_pdfs = download_pdfs
+        self.compress_pdfs = compress_pdfs and COMPRESSION_AVAILABLE
         self._checkpoint: Optional[SearchCheckpoint] = None
 
         self.archive_manager: Optional[S3ArchiveManager] = None
@@ -109,6 +121,11 @@ class MobileScraper(ScraperBase):
             "cases_processed": 0,
             "cases_skipped": 0,
             "history_failed": 0,
+            "pdfs_downloaded": 0,
+            "pdfs_compressed": 0,
+            "pdfs_skipped": 0,
+            "pdfs_failed": 0,
+            "bytes_saved": 0,
             "errors": 0,
             "api_retries": 0,
             "api_failures": 0,
@@ -266,6 +283,104 @@ class MobileScraper(ScraperBase):
             "source": "mobile_api",
         }
 
+    def _download_pdf(
+        self,
+        order: Order,
+        year: int,
+        state: State,
+        district: District,
+        complex_: CourtComplex,
+    ) -> bool:
+        """Download a PDF from an order using the original pdf_url."""
+        pdf_params = self._extract_pdf_params(order.pdf_url)
+        if not pdf_params or not pdf_params.get("filename"):
+            return False
+
+        pdf_filename = pdf_params["filename"]
+        clean_filename = pdf_filename.lstrip("/").replace("/", "_")
+
+        # Check if already downloaded
+        if self.archive_manager.file_exists(
+            year=year,
+            state_code=str(state.code),
+            district_code=str(district.code),
+            complex_code=str(complex_.code),
+            archive_type="data",
+            filename=clean_filename,
+        ):
+            self._update_stats(pdfs_skipped=1)
+            return True
+
+        temp_path = (
+            self.local_dir
+            / "temp"
+            / f"{threading.current_thread().name}_{clean_filename}"
+        )
+        temp_path.parent.mkdir(parents=True, exist_ok=True)
+
+        worker_client = self._get_worker_client()
+        success = False
+        for attempt in range(MAX_PDF_RETRIES):
+            time.sleep(self.delay)
+            try:
+                result = worker_client.download_pdf(
+                    pdf_url=order.pdf_url,
+                    output_path=str(temp_path),
+                )
+                if result and temp_path.exists():
+                    with open(temp_path, "rb") as f:
+                        header = f.read(4)
+                    if header == b"%PDF":
+                        success = True
+                        break
+                    else:
+                        if temp_path.exists():
+                            temp_path.unlink()
+            except Exception as e:
+                logger.debug(f"PDF download error (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename} - {e}")
+
+            if attempt < MAX_PDF_RETRIES - 1:
+                time.sleep((2**attempt) + (0.5 * attempt))
+
+        if success and temp_path.exists():
+            with open(temp_path, "rb") as f:
+                pdf_content = f.read()
+            original_size = len(pdf_content)
+
+            if self.compress_pdfs:
+                try:
+                    compressed = compress_pdf_bytes(pdf_content, self.local_dir / "temp")
+                    if len(compressed) < original_size:
+                        self._update_stats(bytes_saved=original_size - len(compressed), pdfs_compressed=1)
+                        pdf_content = compressed
+                except Exception:
+                    pass
+
+            self.archive_manager.add_to_archive(
+                year=year,
+                state_code=str(state.code),
+                district_code=str(district.code),
+                complex_code=str(complex_.code),
+                archive_type="data",
+                filename=clean_filename,
+                content=pdf_content,
+            )
+            self._update_stats(pdfs_downloaded=1)
+            try:
+                temp_path.unlink()
+            except Exception:
+                pass
+            return True
+        else:
+            logger.warning(f"Failed to download PDF after {MAX_PDF_RETRIES} attempts: {pdf_filename}")
+            self._update_stats(pdfs_failed=1)
+            try:
+                if temp_path.exists():
+                    temp_path.unlink()
+            except Exception:
+                pass
+            return False
+
     def _get_year_from_case(self, case: Case) -> int:
         """Extract year from case data."""
         try:
@@ -284,14 +399,13 @@ class MobileScraper(ScraperBase):
         year: int,
     ) -> bool:
         """
-        Scrape a single case: get history, save metadata.
+        Scrape a single case: get history, save metadata, download PDFs.
 
-        PDF downloads are handled separately by Stage 2 (pdf_stage.py).
         Returns True if case was processed successfully.
         """
         # Check if already processed
         metadata_filename = f"{case.case_no}.json"
-        if not self.refresh_metadata and self.archive_manager.file_exists(
+        if self.archive_manager.file_exists(
             year=year,
             state_code=str(state.code),
             district_code=str(district.code),
@@ -348,6 +462,13 @@ class MobileScraper(ScraperBase):
             filename=metadata_filename,
             content=metadata_json,
         )
+
+        # Download PDFs (uses original pdf_url from case history)
+        if self.download_pdfs:
+            all_orders = final_orders + interim_orders
+            for order in all_orders:
+                if order.pdf_url:
+                    self._download_pdf(order, year, state, district, complex_)
 
         self._update_stats(cases_processed=1)
         return True
@@ -841,9 +962,14 @@ def main():
         help="Re-run all searches ignoring checkpoints (catches new cases filed since last run)",
     )
     parser.add_argument(
-        "--refresh-metadata",
+        "--no-pdfs",
         action="store_true",
-        help="Re-fetch case history and overwrite metadata (use to add pdf_caseno to old metadata)",
+        help="Skip PDF downloads (metadata only)",
+    )
+    parser.add_argument(
+        "--no-compress",
+        action="store_true",
+        help="Disable PDF compression (Ghostscript)",
     )
     args = parser.parse_args()
 
@@ -854,7 +980,8 @@ def main():
         max_workers=args.max_workers,
         local_only=args.local_only,
         verify=args.verify,
-        refresh_metadata=args.refresh_metadata,
+        download_pdfs=not args.no_pdfs,
+        compress_pdfs=not args.no_compress,
     )
 
     stats = scraper.scrape(

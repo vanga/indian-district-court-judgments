@@ -630,8 +630,11 @@ class MobileScraper(ScraperBase):
                 year_found = 0
                 year_processed = 0
 
+                # Adaptive concurrency: more workers at night/weekends (IST)
+                workers, self.delay = self.get_adaptive_settings()
+
                 with concurrent.futures.ThreadPoolExecutor(
-                    max_workers=self.max_workers
+                    max_workers=workers
                 ) as executor:
                     # Submit all tasks for this year
                     future_to_task = {

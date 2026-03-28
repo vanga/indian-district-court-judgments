@@ -28,8 +28,10 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # Configuration
 S3_BUCKET = os.environ.get("S3_BUCKET", "indian-district-court-judgments-test")
 LOCAL_DIR = Path("./local_mobile_data")
-DEFAULT_DELAY = 0.15  # Seconds between API calls
-DEFAULT_MAX_WORKERS = 10
+DEFAULT_DELAY = 0.15  # Seconds between API calls (daytime)
+DEFAULT_MAX_WORKERS = 10  # Workers (daytime)
+OFFPEAK_DELAY = 0.1  # Seconds between API calls (night/weekend)
+OFFPEAK_MAX_WORKERS = 20  # Workers (night/weekend)
 
 
 def setup_logging():
@@ -95,6 +97,18 @@ def add_common_args(parser):
     )
 
 
+def is_offpeak_ist() -> bool:
+    """Check if current IST time is off-peak (night 8pm-8am or weekend)."""
+    now_ist = datetime.now(IST)
+    # Weekend (Saturday=5, Sunday=6)
+    if now_ist.weekday() >= 5:
+        return True
+    # Night: before 8am or after 8pm IST
+    if now_ist.hour < 8 or now_ist.hour >= 20:
+        return True
+    return False
+
+
 class ScraperBase:
     """Shared behavior for both pipeline stages."""
 
@@ -108,9 +122,25 @@ class ScraperBase:
         self._interrupted = False
         self._stats_lock = threading.Lock()
         self.stats = {}  # Subclasses define their own stats keys
+        self._last_offpeak = None  # Track mode changes for logging
 
         signal.signal(signal.SIGINT, self._handle_interrupt)
         signal.signal(signal.SIGTERM, self._handle_interrupt)
+
+    def get_adaptive_settings(self) -> tuple[int, float]:
+        """Return (max_workers, delay) based on IST time of day."""
+        offpeak = is_offpeak_ist()
+        if offpeak != self._last_offpeak:
+            self._last_offpeak = offpeak
+            mode = "off-peak" if offpeak else "peak"
+            workers = OFFPEAK_MAX_WORKERS if offpeak else DEFAULT_MAX_WORKERS
+            delay = OFFPEAK_DELAY if offpeak else DEFAULT_DELAY
+            logging.getLogger(__name__).info(
+                f"Adaptive mode: {mode} (workers={workers}, delay={delay}s)"
+            )
+        if offpeak:
+            return OFFPEAK_MAX_WORKERS, OFFPEAK_DELAY
+        return DEFAULT_MAX_WORKERS, DEFAULT_DELAY
 
     def _handle_interrupt(self, signum, frame):
         if self._interrupted:

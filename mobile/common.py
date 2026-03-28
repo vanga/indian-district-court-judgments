@@ -30,8 +30,8 @@ S3_BUCKET = os.environ.get("S3_BUCKET", "indian-district-court-judgments-test")
 LOCAL_DIR = Path("./local_mobile_data")
 DEFAULT_DELAY = 0.15  # Seconds between API calls (daytime)
 DEFAULT_MAX_WORKERS = 10  # Workers (daytime)
-OFFPEAK_DELAY = 0.1  # Seconds between API calls (night/weekend)
-OFFPEAK_MAX_WORKERS = 20  # Workers (night/weekend)
+OFFPEAK_DELAY = 0.12  # Seconds between API calls (night/weekend)
+OFFPEAK_MAX_WORKERS = 15  # Workers (night/weekend)
 
 
 def setup_logging():

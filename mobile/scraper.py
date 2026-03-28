@@ -698,6 +698,71 @@ class MobileScraper(ScraperBase):
         )
         return total_processed
 
+    def _load_complexes_interleaved(
+        self,
+        state_codes: Optional[list[int]] = None,
+        district_codes: Optional[list[int]] = None,
+        complex_codes: Optional[list[str]] = None,
+    ) -> list[tuple]:
+        """
+        Load all court complexes from courts.csv, interleaved by state.
+
+        Returns list of (State, District, CourtComplex) tuples ordered so
+        consecutive entries come from different states, spreading load across
+        potential backend database shards.
+        """
+        import csv
+        from collections import defaultdict
+        from itertools import zip_longest
+
+        csv_path = Path(__file__).parent.parent / "courts.csv"
+        if not csv_path.exists():
+            logger.error(f"courts.csv not found at {csv_path}")
+            return []
+
+        # Group complexes by state
+        by_state: dict[int, list[tuple]] = defaultdict(list)
+
+        with open(csv_path, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    sc = int(row["state_code"])
+                    dc = int(row["district_code"])
+                    cc = row["complex_code"].strip()
+                    court_numbers = row.get("court_numbers", "").strip()
+                except (KeyError, ValueError):
+                    continue
+
+                if state_codes and sc not in state_codes:
+                    continue
+                if district_codes and dc not in district_codes:
+                    continue
+                if complex_codes and cc not in complex_codes:
+                    continue
+
+                state = State(code=sc, name=row.get("state_name", ""))
+                district = District(code=dc, name=row.get("district_name", ""), state_code=sc)
+                complex_ = CourtComplex(
+                    code=cc,
+                    name=row.get("complex_name", ""),
+                    njdg_est_code=court_numbers,
+                    state_code=sc,
+                    district_code=dc,
+                )
+                by_state[sc].append((state, district, complex_))
+
+        # Interleave: round-robin across states
+        result = []
+        state_lists = list(by_state.values())
+        for items in zip_longest(*state_lists):
+            for item in items:
+                if item is not None:
+                    result.append(item)
+
+        logger.info(f"Loaded {len(result)} complexes across {len(by_state)} states")
+        return result
+
     def scrape(
         self,
         state_codes: Optional[list[int]] = None,
@@ -725,7 +790,7 @@ class MobileScraper(ScraperBase):
         years = list(range(end_year, start_year - 1, -1))  # Recent years first
 
         print("\n" + "=" * 60)
-        print("METADATA STAGE (Stage 1)")
+        print("eCOURTS MOBILE API SCRAPER")
         print("=" * 60)
         print(f"  Years: {start_year} to {end_year}")
         print(f"  Filter: {pending_disposed}")
@@ -750,140 +815,76 @@ class MobileScraper(ScraperBase):
         )
 
         with self.archive_manager:
-            # Get states
-            states = self._retry_with_backoff(self.client.get_states)
-            if not states:
-                logger.error("Failed to get states")
+            # Build flat list of all complexes from courts.csv, interleaved by state
+            all_complexes = self._load_complexes_interleaved(
+                state_codes=state_codes,
+                district_codes=district_codes,
+                complex_codes=complex_codes,
+            )
+
+            if not all_complexes:
+                logger.error("No complexes to process")
                 return self.stats
 
-            if state_codes:
-                states = [s for s in states if s.code in state_codes]
+            logger.info(f"Loaded {len(all_complexes)} complexes (interleaved across states)")
 
-            # States progress bar
-            states_pbar = tqdm(
-                states,
-                desc="States",
-                unit="state",
+            pbar = tqdm(
+                all_complexes,
+                desc="Complexes",
+                unit="complex",
                 position=0,
                 leave=True,
                 ncols=100,
             )
 
-            for state in states_pbar:
+            for state, district, complex_ in pbar:
                 if self._interrupted:
                     logger.info("Stopping due to interrupt - finalizing archives...")
                     break
 
-                states_pbar.set_description(f"State: {state.name[:20]}")
-                self._update_stats(states_processed=1)
-
-                # Get districts
-                time.sleep(self.delay)
-                districts = self._retry_with_backoff(
-                    self.client.get_districts,
-                    state_code=state.code,
+                pbar.set_description(
+                    f"s={state.code} d={district.code} {complex_.name[:20]}"
                 )
+                self._update_stats(complexes_processed=1)
 
-                if not districts:
-                    continue
-
-                if district_codes:
-                    districts = [d for d in districts if d.code in district_codes]
-
-                # Districts progress bar
-                districts_pbar = tqdm(
-                    districts,
-                    desc="  Districts",
-                    unit="dist",
-                    position=1,
-                    leave=False,
-                    ncols=100,
-                )
-
-                for district in districts_pbar:
-                    if self._interrupted:
-                        break
-
-                    districts_pbar.set_description(f"  District: {district.name[:18]}")
-                    self._update_stats(districts_processed=1)
-
-                    # Get court complexes
-                    time.sleep(self.delay)
-                    complexes = self._retry_with_backoff(
-                        self.client.get_court_complexes,
-                        state_code=state.code,
-                        dist_code=district.code,
+                try:
+                    self.scrape_complex(
+                        state=state,
+                        district=district,
+                        complex_=complex_,
+                        years=years,
+                        pending_disposed=pending_disposed,
                     )
-
-                    if not complexes:
-                        continue
-
-                    if complex_codes:
-                        complexes = [c for c in complexes if c.code in complex_codes]
-
-                    # Complexes progress bar
-                    complexes_pbar = tqdm(
-                        complexes,
-                        desc="    Complexes",
-                        unit="complex",
-                        position=2,
-                        leave=False,
-                        ncols=100,
+                    self.archive_manager.flush_complex(
+                        state_code=str(state.code),
+                        district_code=str(district.code),
+                        complex_code=str(complex_.code),
                     )
+                    total_calls = (
+                        self.stats["cases_processed"]
+                        + self.stats["cases_skipped"]
+                        + self.stats["api_failures"]
+                    )
+                    fail_pct = (
+                        f"{self.stats['api_failures'] / total_calls * 100:.0f}%"
+                        if total_calls > 0
+                        else "0%"
+                    )
+                    pbar.set_postfix(
+                        {
+                            "cases": self.stats["cases_processed"],
+                            "pdfs": self.stats["pdfs_downloaded"],
+                            "fail": fail_pct,
+                        }
+                    )
+                    self._log_periodic_status()
+                except Exception as e:
+                    logger.error(
+                        f"Error processing complex {complex_.name}: {e}"
+                    )
+                    self._update_stats(errors=1)
 
-                    for complex_ in complexes_pbar:
-                        if self._interrupted:
-                            break
-
-                        complexes_pbar.set_description(
-                            f"    Complex: {complex_.name[:16]}"
-                        )
-                        self._update_stats(complexes_processed=1)
-
-                        try:
-                            self.scrape_complex(
-                                state=state,
-                                district=district,
-                                complex_=complex_,
-                                years=years,
-                                pending_disposed=pending_disposed,
-                            )
-                            # Flushing now happens inside scrape_complex after each year completes.
-                            # Flush any remaining archives for this complex (e.g. from interrupt or edge cases).
-                            self.archive_manager.flush_complex(
-                                state_code=str(state.code),
-                                district_code=str(district.code),
-                                complex_code=str(complex_.code),
-                            )
-                            # Update postfix with current stats
-                            total_calls = (
-                                self.stats["cases_processed"]
-                                + self.stats["cases_skipped"]
-                                + self.stats["api_failures"]
-                            )
-                            fail_pct = (
-                                f"{self.stats['api_failures'] / total_calls * 100:.0f}%"
-                                if total_calls > 0
-                                else "0%"
-                            )
-                            complexes_pbar.set_postfix(
-                                {
-                                    "cases": self.stats["cases_processed"],
-                                    "skip": self.stats["cases_skipped"],
-                                    "fail": fail_pct,
-                                    "conn_err": self.stats["connection_errors"],
-                                }
-                            )
-                            self._log_periodic_status()
-                        except Exception as e:
-                            logger.error(
-                                f"Error processing complex {complex_.name}: {e}"
-                            )
-                            self._update_stats(errors=1)
-
-                    complexes_pbar.close()
-                districts_pbar.close()
-            states_pbar.close()
+            pbar.close()
 
         self.stats["end_time"] = datetime.now(IST).isoformat()
 
@@ -896,9 +897,9 @@ class MobileScraper(ScraperBase):
         """Print scraping summary."""
         print("\n" + "=" * 60)
         if self._interrupted:
-            print("METADATA STAGE INTERRUPTED - Archives saved properly")
+            print("SCRAPING INTERRUPTED - Archives saved properly")
         else:
-            print("METADATA STAGE COMPLETE")
+            print("SCRAPING COMPLETE")
         print("=" * 60)
         print(f"States processed:     {self.stats['states_processed']}")
         print(f"Districts processed:  {self.stats['districts_processed']}")

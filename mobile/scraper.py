@@ -315,27 +315,21 @@ class MobileScraper(ScraperBase):
 
         worker_client = self._get_worker_client()
         success = False
-        for attempt in range(MAX_PDF_RETRIES):
-            time.sleep(self.delay)
-            try:
-                result = worker_client.download_pdf(
-                    pdf_url=order.pdf_url,
-                    output_path=str(temp_path),
-                )
-                if result and temp_path.exists():
-                    with open(temp_path, "rb") as f:
-                        header = f.read(4)
-                    if header == b"%PDF":
-                        success = True
-                        break
-                    else:
-                        if temp_path.exists():
-                            temp_path.unlink()
-            except Exception as e:
-                logger.debug(f"PDF download error (attempt {attempt + 1}/{MAX_PDF_RETRIES}): {pdf_filename} - {e}")
-
-            if attempt < MAX_PDF_RETRIES - 1:
-                time.sleep((2**attempt) + (0.5 * attempt))
+        try:
+            result = worker_client.download_pdf(
+                pdf_url=order.pdf_url,
+                output_path=str(temp_path),
+            )
+            if result and temp_path.exists():
+                with open(temp_path, "rb") as f:
+                    header = f.read(4)
+                if header == b"%PDF":
+                    success = True
+                else:
+                    if temp_path.exists():
+                        temp_path.unlink()
+        except Exception as e:
+            logger.debug(f"PDF download error: {pdf_filename} - {e}")
 
         if success and temp_path.exists():
             with open(temp_path, "rb") as f:

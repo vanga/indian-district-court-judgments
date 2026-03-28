@@ -28,7 +28,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # Configuration
 S3_BUCKET = os.environ.get("S3_BUCKET", "indian-district-court-judgments-test")
 LOCAL_DIR = Path("./local_mobile_data")
-DEFAULT_DELAY = 0.3  # Seconds between API calls
+DEFAULT_DELAY = 0.15  # Seconds between API calls
 DEFAULT_MAX_WORKERS = 10
 
 

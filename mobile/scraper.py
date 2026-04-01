@@ -568,7 +568,9 @@ class MobileScraper(ScraperBase):
         )
         self._checkpoint.load()
 
-        # Get case types
+        # Get case types (re-init session since main client may have expired)
+        self.client._initialized = False
+        self._ensure_session()
         time.sleep(self.delay)
         case_types = self._retry_with_backoff(
             self.client.get_case_types,

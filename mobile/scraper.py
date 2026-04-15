@@ -580,7 +580,7 @@ class MobileScraper(ScraperBase):
         )
 
         if not case_types:
-            logger.warning(f"No case types found for {complex_.name}")
+            logger.warning(f"No case types found for {complex_.name} (state={state.code} district={district.code})")
             return 0
 
         # Generate tasks grouped by year

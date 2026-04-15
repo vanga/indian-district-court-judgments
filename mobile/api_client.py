@@ -329,7 +329,7 @@ class MobileAPIClient:
         )
 
         if not result or "states" not in result:
-            return []
+            return None  # Return None so _retry_with_backoff retries
 
         states = []
         for s in result["states"]:
@@ -353,7 +353,7 @@ class MobileAPIClient:
         )
 
         if not result:
-            return []
+            return None
 
         # Key can be "district" or "districts"
         districts_data = result.get("districts") or result.get("district") or []
@@ -382,7 +382,7 @@ class MobileAPIClient:
         )
 
         if not result or "courtComplex" not in result:
-            return []
+            return None
 
         complexes = []
         for c in result["courtComplex"]:
@@ -426,7 +426,7 @@ class MobileAPIClient:
         )
 
         if not result:
-            return []
+            return None  # Return None so _retry_with_backoff retries
 
         # Key can be "caseType" or "case_types"
         case_types_data = result.get("caseType") or result.get("case_types") or []
@@ -494,7 +494,7 @@ class MobileAPIClient:
         )
 
         if not result:
-            return []
+            return None
 
         # print(f"   DEBUG search result: {json.dumps(result, indent=2)[:500]}")
 

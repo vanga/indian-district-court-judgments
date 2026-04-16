@@ -225,12 +225,20 @@ class MobileAPIClient:
         encrypted_jwt = encrypt_data_cbc(jwt_token)
         return f"Bearer {encrypted_jwt}"
 
+    def _reset_http_session(self) -> None:
+        """Replace the underlying requests.Session to clear stale connections."""
+        try:
+            self.session.close()
+        except Exception:
+            pass
+        self.session = requests.Session()
+
     def _make_request(
         self,
         endpoint: str,
         params: dict,
         include_auth: bool = True,
-        retry_count: int = 3
+        retry_count: int = 2
     ) -> Optional[Any]:
         """
         Make an encrypted request to the API.
@@ -239,7 +247,8 @@ class MobileAPIClient:
             endpoint: API endpoint
             params: Request parameters
             include_auth: Whether to include Authorization header
-            retry_count: Number of retries on failure
+            retry_count: Number of retries on failure (kept low; outer
+                         _retry_with_backoff in scraper handles repeated attempts)
 
         Returns:
             Decrypted response data or None on error
@@ -312,10 +321,17 @@ class MobileAPIClient:
                 except json.JSONDecodeError:
                     continue
 
+            except requests.ConnectionError as e:
+                logger.warning(f"Connection error on {endpoint} (attempt {attempt + 1}/{retry_count}): {e}")
+                # Stale connection pool — replace session so next attempt opens fresh TCP
+                self._reset_http_session()
+                if attempt < retry_count - 1:
+                    time.sleep(random.uniform(1.0, 3.0))
+                continue
             except requests.RequestException as e:
                 logger.warning(f"Request to {endpoint} failed (attempt {attempt + 1}/{retry_count}): {e}")
                 if attempt < retry_count - 1:
-                    time.sleep(1)
+                    time.sleep(random.uniform(0.5, 2.0))
                 continue
 
         logger.debug(f"All {retry_count} attempts to {endpoint} failed")

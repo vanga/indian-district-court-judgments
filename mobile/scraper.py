@@ -27,6 +27,7 @@ import argparse
 import concurrent.futures
 import json
 import logging
+import random
 import sys
 import threading
 import time
@@ -146,10 +147,16 @@ class MobileScraper(ScraperBase):
             client.initialize_session()
             self._thread_local.client = client
             logger.debug(f"Initialized worker client on thread {threading.current_thread().name}")
+        elif not client.jwt_token:
+            # JWT was cleared (e.g. after repeated session errors) — re-initialize
+            client._reset_http_session()
+            client._initialized = False
+            client.initialize_session()
+            logger.debug(f"Re-initialized stale worker client on thread {threading.current_thread().name}")
         return client
 
     def _retry_with_backoff(self, func, *args, **kwargs):
-        """Execute function with exponential backoff retry."""
+        """Execute function with exponential backoff retry and jitter."""
         for attempt in range(self.max_retries):
             try:
                 result = func(*args, **kwargs)
@@ -163,7 +170,9 @@ class MobileScraper(ScraperBase):
                     self._update_stats(connection_errors=1)
 
             if attempt < self.max_retries - 1:
-                wait_time = (2**attempt) + (0.1 * attempt)
+                # Jitter spreads retry waves across concurrent workers
+                base = (2**attempt) + (0.1 * attempt)
+                wait_time = base + random.uniform(0, base * 0.5)
                 time.sleep(wait_time)
 
         self._update_stats(api_failures=1)

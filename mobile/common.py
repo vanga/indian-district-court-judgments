@@ -28,8 +28,8 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # Configuration
 S3_BUCKET = os.environ.get("S3_BUCKET", "indian-district-court-judgments-test")
 LOCAL_DIR = Path("./local_mobile_data")
-DEFAULT_DELAY = 0.3  # Seconds between API calls (daytime)
-DEFAULT_MAX_WORKERS = 10  # Workers (daytime)
+DEFAULT_DELAY = 0.5  # Seconds between API calls (daytime)
+DEFAULT_MAX_WORKERS = 8  # Workers (daytime)
 OFFPEAK_DELAY = 0.2  # Seconds between API calls (night/weekend)
 OFFPEAK_MAX_WORKERS = 12  # Workers (night/weekend)
 

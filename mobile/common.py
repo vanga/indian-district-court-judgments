@@ -32,6 +32,8 @@ DEFAULT_DELAY = 0.5  # Seconds between API calls (daytime)
 DEFAULT_MAX_WORKERS = 8  # Workers (daytime)
 OFFPEAK_DELAY = 0.2  # Seconds between API calls (night/weekend)
 OFFPEAK_MAX_WORKERS = 12  # Workers (night/weekend)
+SUPERPEAK_DELAY = 1.0  # Seconds between API calls (IST morning rush 09:00-13:00)
+SUPERPEAK_MAX_WORKERS = 4  # Workers (IST morning rush)
 
 
 def setup_logging():
@@ -109,6 +111,18 @@ def is_offpeak_ist() -> bool:
     return False
 
 
+def is_superpeak_ist() -> bool:
+    """Check if current IST time is super-peak (weekday 09:00-13:00).
+
+    eCourts sees heaviest load during Indian morning office hours. Connection
+    resets spike sharply at 09:00 IST and remain elevated until ~13:00.
+    """
+    now_ist = datetime.now(IST)
+    if now_ist.weekday() >= 5:
+        return False  # Weekend is off-peak, not super-peak
+    return 9 <= now_ist.hour < 13
+
+
 class ScraperBase:
     """Shared behavior for both pipeline stages."""
 
@@ -129,18 +143,22 @@ class ScraperBase:
 
     def get_adaptive_settings(self) -> tuple[int, float]:
         """Return (max_workers, delay) based on IST time of day."""
-        offpeak = is_offpeak_ist()
-        if offpeak != self._last_offpeak:
-            self._last_offpeak = offpeak
-            mode = "off-peak" if offpeak else "peak"
-            workers = OFFPEAK_MAX_WORKERS if offpeak else DEFAULT_MAX_WORKERS
-            delay = OFFPEAK_DELAY if offpeak else DEFAULT_DELAY
+        if is_offpeak_ist():
+            mode_key = "off-peak"
+            workers, delay = OFFPEAK_MAX_WORKERS, OFFPEAK_DELAY
+        elif is_superpeak_ist():
+            mode_key = "super-peak"
+            workers, delay = SUPERPEAK_MAX_WORKERS, SUPERPEAK_DELAY
+        else:
+            mode_key = "peak"
+            workers, delay = DEFAULT_MAX_WORKERS, DEFAULT_DELAY
+
+        if mode_key != self._last_offpeak:
+            self._last_offpeak = mode_key
             logging.getLogger(__name__).info(
-                f"Adaptive mode: {mode} (workers={workers}, delay={delay}s)"
+                f"Adaptive mode: {mode_key} (workers={workers}, delay={delay}s)"
             )
-        if offpeak:
-            return OFFPEAK_MAX_WORKERS, OFFPEAK_DELAY
-        return DEFAULT_MAX_WORKERS, DEFAULT_DELAY
+        return workers, delay
 
     def _handle_interrupt(self, signum, frame):
         if self._interrupted:

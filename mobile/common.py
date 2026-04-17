@@ -28,12 +28,12 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # Configuration
 S3_BUCKET = os.environ.get("S3_BUCKET", "indian-district-court-judgments-test")
 LOCAL_DIR = Path("./local_mobile_data")
-DEFAULT_DELAY = 0.5  # Seconds between API calls (daytime)
-DEFAULT_MAX_WORKERS = 8  # Workers (daytime)
-OFFPEAK_DELAY = 0.2  # Seconds between API calls (night/weekend)
-OFFPEAK_MAX_WORKERS = 12  # Workers (night/weekend)
-SUPERPEAK_DELAY = 1.0  # Seconds between API calls (IST morning rush 09:00-13:00)
-SUPERPEAK_MAX_WORKERS = 4  # Workers (IST morning rush)
+DEFAULT_DELAY = 0.3  # Seconds between API calls (daytime)
+DEFAULT_MAX_WORKERS = 12  # Workers (daytime)
+OFFPEAK_DELAY = 0.1  # Seconds between API calls (night/weekend)
+OFFPEAK_MAX_WORKERS = 20  # Workers (night/weekend)
+SUPERPEAK_DELAY = 0.8  # Seconds between API calls (IST morning rush 09:00-13:00)
+SUPERPEAK_MAX_WORKERS = 6  # Workers (IST morning rush)
 
 
 def setup_logging():

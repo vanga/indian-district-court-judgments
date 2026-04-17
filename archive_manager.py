@@ -245,6 +245,11 @@ class S3ArchiveManager:
         # Track total number of parts created for each key in this session
         self.parts_created_count: Dict[ArchiveKey, int] = defaultdict(int)
 
+        # Track which keys have already had their S3 archive downloaded this session.
+        # Prevents repeated downloads when multiple worker threads race to call get_archive()
+        # on the same key after _finalize_current_part() removes it from self.archives.
+        self._s3_download_attempted: set = set()
+
     def __enter__(self):
         self.local_dir.mkdir(parents=True, exist_ok=True)
         return self
@@ -499,12 +504,23 @@ class S3ArchiveManager:
                 part.name == main_archive_name for part in index.parts
             )
 
-            # Check if main archive exists and download it
+            # Check if main archive exists and download it.
+            # Only attempt the S3 download once per key per session — if multiple worker
+            # threads race here after _finalize_current_part removes the key from
+            # self.archives, we must not re-download the same archive repeatedly.
             local_path = None
-            if has_main_in_index or len(index.parts) == 0:
+            if (has_main_in_index or len(index.parts) == 0) and key not in self._s3_download_attempted:
+                self._s3_download_attempted.add(key)
                 local_path = self._download_main_archive_if_exists(
                     year, state_code, district_code, complex_code, archive_type
                 )
+            elif key in self._s3_download_attempted:
+                # Already downloaded (or confirmed absent) this session.
+                # Check if the local file still exists from a previous download.
+                local_dir = self._get_local_dir(year, state_code, district_code, complex_code)
+                ext = self._get_archive_extension(archive_type)
+                candidate = local_dir / f"{archive_type}{ext}"
+                local_path = candidate if candidate.exists() else None
 
             if local_path and local_path.exists():
                 # Check if the existing archive is already at size limit

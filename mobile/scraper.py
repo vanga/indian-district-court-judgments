@@ -107,8 +107,14 @@ class MobileScraper(ScraperBase):
         self.verify = verify
         self.download_pdfs = download_pdfs
         self.compress_pdfs = compress_pdfs and COMPRESSION_AVAILABLE
-        self._checkpoint: Optional[SearchCheckpoint] = None
+        self.parallel_complexes = 1  # Set via scrape() or CLI
+        # Shared JWT: one appReleaseWebService call for all parallel complex threads
+        self._shared_jwt_lock = threading.Lock()
+        self._shared_jwt_initialized = False  # True once init was attempted
+        self._shared_jwt_token = ""           # Non-empty if init succeeded
 
+        # Legacy fallbacks — only used if methods are called without explicit params
+        self._checkpoint: Optional[SearchCheckpoint] = None
         self.archive_manager: Optional[S3ArchiveManager] = None
         self.stats = {
             "states_processed": 0,
@@ -138,20 +144,89 @@ class MobileScraper(ScraperBase):
         self._failed_lock = self._stats_lock  # reuse the same lock
         self._last_status_time = time.time()
         self._thread_local = threading.local()
+        self._complex_thread_local = threading.local()  # One client per outer complex-worker thread
+
+    def _get_shared_jwt(self) -> str:
+        """
+        Get a shared JWT token for parallel complex workers, initializing it once.
+        Only one appReleaseWebService.php call is made for all N parallel threads.
+        Returns the token string, or "" if init failed.
+        """
+        with self._shared_jwt_lock:
+            if self._shared_jwt_initialized:
+                return self._shared_jwt_token
+            # First thread to arrive — initialize the shared session
+            bootstrap = MobileAPIClient()
+            for attempt in range(self.max_retries):
+                try:
+                    if bootstrap.initialize_session():
+                        self._shared_jwt_token = bootstrap.jwt_token
+                        break
+                except Exception as e:
+                    logger.warning(f"Shared session init attempt {attempt + 1}/{self.max_retries}: {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep((2 ** attempt) + 1)
+            else:
+                logger.error("Shared session init failed — all attempts exhausted")
+            self._shared_jwt_initialized = True
+            return self._shared_jwt_token
+
+    def _get_complex_client(self) -> MobileAPIClient:
+        """
+        Get or create a persistent MobileAPIClient for the current outer complex-worker thread.
+        In parallel mode: all threads share one JWT token (one appReleaseWebService.php call).
+        If session init fails (e.g. rate-limited), client proceeds without JWT — API endpoints
+        generally work without it. Reuses the per-thread client across all complexes on the thread.
+        """
+        client = getattr(self._complex_thread_local, "client", None)
+        if client is not None:
+            # Refresh JWT if cleared (token expiry), best-effort
+            if not client.jwt_token:
+                jwt = self._get_shared_jwt()
+                if jwt:
+                    client.jwt_token = jwt
+                    client._initialized = True
+            return client
+
+        # First time on this thread — get the shared JWT (best-effort)
+        jwt = self._get_shared_jwt()
+        client = MobileAPIClient()
+        if jwt:
+            client.jwt_token = jwt
+            client._initialized = True
+            logger.debug(f"Complex client ready on {threading.current_thread().name} (shared JWT)")
+        else:
+            logger.warning(f"Complex client on {threading.current_thread().name} — proceeding without JWT")
+        self._complex_thread_local.client = client
+        return client
 
     def _get_worker_client(self) -> MobileAPIClient:
         """Get or create a per-thread MobileAPIClient with its own JWT session."""
         client = getattr(self._thread_local, "client", None)
         if client is None:
             client = MobileAPIClient()
-            client.initialize_session()
+            if self.parallel_complexes > 1:
+                # Reuse the shared JWT — avoids a separate appReleaseWebService call per worker thread
+                jwt = self._get_shared_jwt()
+                if jwt:
+                    client.jwt_token = jwt
+                    client._initialized = True
+                # else: proceed without JWT; endpoints may still work
+            else:
+                client.initialize_session()
             self._thread_local.client = client
             logger.debug(f"Initialized worker client on thread {threading.current_thread().name}")
         elif not client.jwt_token:
-            # JWT was cleared (e.g. after repeated session errors) — re-initialize
+            # JWT was cleared (e.g. after repeated session errors) — try to refresh from shared
             client._reset_http_session()
             client._initialized = False
-            client.initialize_session()
+            if self.parallel_complexes > 1:
+                jwt = self._get_shared_jwt()
+                if jwt:
+                    client.jwt_token = jwt
+                    client._initialized = True
+            else:
+                client.initialize_session()
             logger.debug(f"Re-initialized stale worker client on thread {threading.current_thread().name}")
         return client
 
@@ -296,15 +371,17 @@ class MobileScraper(ScraperBase):
         state: State,
         district: District,
         complex_: CourtComplex,
+        archive_manager: S3ArchiveManager = None,
     ) -> bool:
         """Download a PDF from an order using the original pdf_url."""
+        am = archive_manager or self.archive_manager
         pdf_filename = self._extract_pdf_filename(order.pdf_url)
         if not pdf_filename:
             return False
         clean_filename = pdf_filename.lstrip("/").replace("/", "_")
 
         # Check if already downloaded
-        if self.archive_manager.file_exists(
+        if am.file_exists(
             year=year,
             state_code=str(state.code),
             district_code=str(district.code),
@@ -354,7 +431,7 @@ class MobileScraper(ScraperBase):
                 except Exception:
                     pass
 
-            self.archive_manager.add_to_archive(
+            am.add_to_archive(
                 year=year,
                 state_code=str(state.code),
                 district_code=str(district.code),
@@ -395,15 +472,17 @@ class MobileScraper(ScraperBase):
         district: District,
         complex_: CourtComplex,
         year: int,
+        archive_manager: S3ArchiveManager = None,
     ) -> bool:
         """
         Scrape a single case: get history, save metadata, download PDFs.
 
         Returns True if case was processed successfully.
         """
+        am = archive_manager or self.archive_manager
         # Check if already processed
         metadata_filename = f"{case.case_no}.json"
-        if self.archive_manager.file_exists(
+        if am.file_exists(
             year=year,
             state_code=str(state.code),
             district_code=str(district.code),
@@ -451,7 +530,7 @@ class MobileScraper(ScraperBase):
 
         # Save metadata to archive
         metadata_json = json.dumps(metadata, ensure_ascii=False, indent=2)
-        self.archive_manager.add_to_archive(
+        am.add_to_archive(
             year=year,
             state_code=str(state.code),
             district_code=str(district.code),
@@ -466,7 +545,7 @@ class MobileScraper(ScraperBase):
             all_orders = final_orders + interim_orders
             for order in all_orders:
                 if order.pdf_url:
-                    self._download_pdf(order, year, state, district, complex_)
+                    self._download_pdf(order, year, state, district, complex_, archive_manager=am)
 
         self._update_stats(cases_processed=1)
         return True
@@ -477,6 +556,8 @@ class MobileScraper(ScraperBase):
         state: State,
         district: District,
         complex_: CourtComplex,
+        archive_manager: S3ArchiveManager = None,
+        checkpoint: 'SearchCheckpoint' = None,
     ) -> Tuple[int, int]:
         """
         Process a single case type task (one case type + year + status combination).
@@ -486,11 +567,13 @@ class MobileScraper(ScraperBase):
         if self._interrupted:
             return (0, 0)
 
+        cp = checkpoint or self._checkpoint
+
         # Skip if this search was already completed (unless --verify)
         if (
             not self.verify
-            and self._checkpoint
-            and self._checkpoint.is_completed(task.case_type_code, task.year, task.status)
+            and cp
+            and cp.is_completed(task.case_type_code, task.year, task.status)
         ):
             self._update_stats(searches_skipped=1)
             return (0, 0)
@@ -528,8 +611,8 @@ class MobileScraper(ScraperBase):
         if not cases:
             self._update_stats(searches_empty=1)
             # Checkpoint the empty result so we skip it next time
-            if self._checkpoint:
-                self._checkpoint.record(task.case_type_code, task.year, task.status, 0)
+            if cp:
+                cp.record(task.case_type_code, task.year, task.status, 0)
             return (0, 0)
 
         cases_found = len(cases)
@@ -540,15 +623,15 @@ class MobileScraper(ScraperBase):
             if self._interrupted:
                 break
             try:
-                if self.scrape_case(case, state, district, complex_, task.year):
+                if self.scrape_case(case, state, district, complex_, task.year, archive_manager=archive_manager):
                     processed += 1
             except Exception as e:
                 logger.debug(f"Error processing case {case.case_no}: {e}")
                 self._update_stats(errors=1)
 
         # Checkpoint only if all cases were processed (no interrupt)
-        if not self._interrupted and self._checkpoint:
-            self._checkpoint.record(task.case_type_code, task.year, task.status, cases_found)
+        if not self._interrupted and cp:
+            cp.record(task.case_type_code, task.year, task.status, cases_found)
 
         return (cases_found, processed)
 
@@ -563,149 +646,179 @@ class MobileScraper(ScraperBase):
         """
         Scrape all cases from a court complex using concurrent workers.
 
+        Each complex creates its own S3ArchiveManager, SearchCheckpoint, and
+        MobileAPIClient — no shared mutable state with other complexes. This
+        allows multiple complexes to be scraped in parallel.
+
         Returns number of cases processed.
         """
-        # Load search checkpoints for this complex
-        self._checkpoint = SearchCheckpoint(
+        # Create per-complex archive manager (fully independent)
+        archive_manager = S3ArchiveManager(
             s3_bucket=self.s3_bucket,
+            s3_prefix="",
             local_dir=self.local_dir,
-            state_code=str(state.code),
-            district_code=str(district.code),
-            complex_code=str(complex_.code),
-            s3_client=self.archive_manager.s3 if self.archive_manager else None,
+            immediate_upload=self.immediate_upload,
             local_only=self.local_only,
         )
-        self._checkpoint.load()
 
-        # Get case types (re-init session since main client may have expired)
-        self.client._initialized = False
-        self._ensure_session()
-        time.sleep(self.delay)
-        case_types = self._retry_with_backoff(
-            self.client.get_case_types,
-            state_code=state.code,
-            dist_code=district.code,
-            court_code=complex_.njdg_est_code,
-        )
+        with archive_manager:
+            # Load search checkpoints for this complex
+            checkpoint = SearchCheckpoint(
+                s3_bucket=self.s3_bucket,
+                local_dir=self.local_dir,
+                state_code=str(state.code),
+                district_code=str(district.code),
+                complex_code=str(complex_.code),
+                s3_client=archive_manager.s3,
+                local_only=self.local_only,
+            )
+            checkpoint.load()
 
-        if not case_types:
-            logger.warning(f"No case types found for {complex_.name} (state={state.code} district={district.code})")
-            return 0
-
-        # Generate tasks grouped by year
-        statuses = (
-            ["Pending", "Disposed"]
-            if pending_disposed == "Both"
-            else [pending_disposed]
-        )
-        tasks_per_year: dict[int, List[CaseTypeTask]] = {}
-        total_task_count = 0
-
-        for year in years:
-            year_tasks = []
-            for ct in case_types:
-                for status in statuses:
-                    year_tasks.append(
-                        CaseTypeTask(
-                            case_type_code=ct.code,
-                            case_type_name=ct.name,
-                            year=year,
-                            status=status,
-                        )
-                    )
-            tasks_per_year[year] = year_tasks
-            total_task_count += len(year_tasks)
-
-        self._update_stats(case_types_processed=len(case_types))
-
-        logger.info(
-            f"    Found {len(case_types)} case types, {total_task_count} tasks across {len(years)} years (workers: {self.max_workers})"
-        )
-
-        # Process tasks year by year, flushing to S3 after each year
-        total_processed = 0
-        total_found = 0
-
-        with tqdm(
-            total=total_task_count,
-            desc=f"    {complex_.name[:25]}",
-            unit="task",
-            leave=False,
-            ncols=100,
-        ) as pbar:
-            for year in years:
-                if self._interrupted:
-                    break
-
-                year_tasks = tasks_per_year[year]
-                year_found = 0
-                year_processed = 0
-
-                # Adaptive concurrency: more workers at night/weekends (IST)
-                workers, self.delay = self.get_adaptive_settings()
-
-                with concurrent.futures.ThreadPoolExecutor(
-                    max_workers=workers
-                ) as executor:
-                    # Submit all tasks for this year
-                    future_to_task = {
-                        executor.submit(
-                            self._process_case_type_task,
-                            task,
-                            state,
-                            district,
-                            complex_,
-                        ): task
-                        for task in year_tasks
-                    }
-
-                    for future in concurrent.futures.as_completed(future_to_task):
-                        task = future_to_task[future]
-                        try:
-                            found, processed = future.result()
-                            year_found += found
-                            year_processed += processed
-                            total_found += found
-                            total_processed += processed
-                            if found > 0:
-                                pbar.set_postfix(
-                                    {
-                                        "found": total_found,
-                                        "processed": total_processed,
-                                        "year": year,
-                                    }
-                                )
-                        except Exception as e:
-                            logger.debug(
-                                f"Task failed ({task.case_type_name}/{task.year}/{task.status}): {e}"
-                            )
-                            self._update_stats(errors=1)
-                        finally:
-                            pbar.update(1)
-
-                        if self._interrupted:
-                            logger.info(
-                                "Stopping due to interrupt - cancelling remaining tasks..."
-                            )
-                            executor.shutdown(wait=False, cancel_futures=True)
+            # Get (or reuse) the per-thread client for this complex worker.
+            # In parallel mode: 5 threads → 5 sessions, reused across all complexes on that thread.
+            # In sequential mode: creates a fresh client per complex (original behavior).
+            if self.parallel_complexes > 1:
+                client = self._get_complex_client()
+            else:
+                client = MobileAPIClient()
+                for attempt in range(self.max_retries):
+                    try:
+                        if client.initialize_session():
                             break
+                    except Exception as e:
+                        logger.warning(f"Session init attempt {attempt + 1}/{self.max_retries} for {complex_.name}: {e}")
+                    if attempt < self.max_retries - 1:
+                        time.sleep((2 ** attempt) + 1)
+                else:
+                    logger.error(f"All session init attempts failed for {complex_.name}")
+                    return 0
 
-                # Flush archives for this year+complex to S3
-                if self.archive_manager and (year_found > 0 or year_processed > 0):
-                    self.archive_manager.flush_complex_year(
-                        year=year,
-                        state_code=str(state.code),
-                        district_code=str(district.code),
-                        complex_code=str(complex_.code),
-                    )
+            time.sleep(self.delay)
+            case_types = self._retry_with_backoff(
+                client.get_case_types,
+                state_code=state.code,
+                dist_code=district.code,
+                court_code=complex_.njdg_est_code,
+            )
 
-                # Flush search checkpoints after each year
-                if self._checkpoint:
-                    self._checkpoint.flush()
+            if not case_types:
+                logger.warning(f"No case types found for {complex_.name} (state={state.code} district={district.code})")
+                return 0
 
-        # Final flush (e.g. from interrupt mid-year)
-        if self._checkpoint:
-            self._checkpoint.flush()
+            # Generate tasks grouped by year
+            statuses = (
+                ["Pending", "Disposed"]
+                if pending_disposed == "Both"
+                else [pending_disposed]
+            )
+            tasks_per_year: dict[int, List[CaseTypeTask]] = {}
+            total_task_count = 0
+
+            for year in years:
+                year_tasks = []
+                for ct in case_types:
+                    for status in statuses:
+                        year_tasks.append(
+                            CaseTypeTask(
+                                case_type_code=ct.code,
+                                case_type_name=ct.name,
+                                year=year,
+                                status=status,
+                            )
+                        )
+                tasks_per_year[year] = year_tasks
+                total_task_count += len(year_tasks)
+
+            self._update_stats(case_types_processed=len(case_types))
+
+            logger.info(
+                f"    Found {len(case_types)} case types, {total_task_count} tasks across {len(years)} years (workers: {self.max_workers})"
+            )
+
+            # Process tasks year by year, flushing to S3 after each year
+            total_processed = 0
+            total_found = 0
+
+            with tqdm(
+                total=total_task_count,
+                desc=f"    {complex_.name[:25]}",
+                unit="task",
+                leave=False,
+                ncols=100,
+            ) as pbar:
+                for year in years:
+                    if self._interrupted:
+                        break
+
+                    year_tasks = tasks_per_year[year]
+                    year_found = 0
+                    year_processed = 0
+
+                    # Adaptive concurrency: more workers at night/weekends (IST)
+                    workers, self.delay = self.get_adaptive_settings()
+
+                    with concurrent.futures.ThreadPoolExecutor(
+                        max_workers=workers
+                    ) as executor:
+                        # Submit all tasks for this year
+                        future_to_task = {
+                            executor.submit(
+                                self._process_case_type_task,
+                                task,
+                                state,
+                                district,
+                                complex_,
+                                archive_manager=archive_manager,
+                                checkpoint=checkpoint,
+                            ): task
+                            for task in year_tasks
+                        }
+
+                        for future in concurrent.futures.as_completed(future_to_task):
+                            task = future_to_task[future]
+                            try:
+                                found, processed = future.result()
+                                year_found += found
+                                year_processed += processed
+                                total_found += found
+                                total_processed += processed
+                                if found > 0:
+                                    pbar.set_postfix(
+                                        {
+                                            "found": total_found,
+                                            "processed": total_processed,
+                                            "year": year,
+                                        }
+                                    )
+                            except Exception as e:
+                                logger.debug(
+                                    f"Task failed ({task.case_type_name}/{task.year}/{task.status}): {e}"
+                                )
+                                self._update_stats(errors=1)
+                            finally:
+                                pbar.update(1)
+
+                            if self._interrupted:
+                                logger.info(
+                                    "Stopping due to interrupt - cancelling remaining tasks..."
+                                )
+                                executor.shutdown(wait=False, cancel_futures=True)
+                                break
+
+                    # Flush archives for this year+complex to S3
+                    if year_found > 0 or year_processed > 0:
+                        archive_manager.flush_complex_year(
+                            year=year,
+                            state_code=str(state.code),
+                            district_code=str(district.code),
+                            complex_code=str(complex_.code),
+                        )
+
+                    # Flush search checkpoints after each year
+                    checkpoint.flush()
+
+            # Final flush (e.g. from interrupt mid-year)
+            checkpoint.flush()
 
         logger.info(
             f"    Complex done: {total_found} cases found, {total_processed} processed"
@@ -777,6 +890,58 @@ class MobileScraper(ScraperBase):
         logger.info(f"Loaded {len(result)} complexes across {len(by_state)} states")
         return result
 
+    def _scrape_complex_worker(
+        self,
+        state: State,
+        district: District,
+        complex_: CourtComplex,
+        years: list[int],
+        pending_disposed: str,
+        pbar: Optional[tqdm] = None,
+    ):
+        """Worker function for scraping a single complex. Called from scrape()."""
+        if self._interrupted:
+            return
+
+        if pbar:
+            pbar.set_description(
+                f"s={state.code} d={district.code} {complex_.name[:20]}"
+            )
+        self._update_stats(complexes_processed=1)
+
+        try:
+            self.scrape_complex(
+                state=state,
+                district=district,
+                complex_=complex_,
+                years=years,
+                pending_disposed=pending_disposed,
+            )
+            total_calls = (
+                self.stats["cases_processed"]
+                + self.stats["cases_skipped"]
+                + self.stats["api_failures"]
+            )
+            fail_pct = (
+                f"{self.stats['api_failures'] / total_calls * 100:.0f}%"
+                if total_calls > 0
+                else "0%"
+            )
+            if pbar:
+                pbar.set_postfix(
+                    {
+                        "cases": self.stats["cases_processed"],
+                        "pdfs": self.stats["pdfs_downloaded"],
+                        "fail": fail_pct,
+                    }
+                )
+            self._log_periodic_status()
+        except Exception as e:
+            logger.error(
+                f"Error processing complex {complex_.name}: {e}"
+            )
+            self._update_stats(errors=1)
+
     def scrape(
         self,
         state_codes: Optional[list[int]] = None,
@@ -808,97 +973,85 @@ class MobileScraper(ScraperBase):
         print("=" * 60)
         print(f"  Years: {start_year} to {end_year}")
         print(f"  Filter: {pending_disposed}")
-        print(f"  Workers: {self.max_workers}")
+        print(f"  Workers per complex: {self.max_workers}")
+        print(f"  Parallel complexes: {self.parallel_complexes}")
         print(f"  S3 Bucket: {self.s3_bucket}")
         print(f"  Local Only: {self.local_only}")
         print(f"  Verify Mode: {self.verify}")
         print("=" * 60 + "\n")
 
-        # Initialize session
-        if not self._ensure_session():
-            logger.error("Failed to initialize API session")
-            return self.stats
-
-        # Initialize archive manager
-        self.archive_manager = S3ArchiveManager(
-            s3_bucket=self.s3_bucket,
-            s3_prefix="",
-            local_dir=self.local_dir,
-            immediate_upload=self.immediate_upload,
-            local_only=self.local_only,
+        # Build flat list of all complexes from courts.csv, interleaved by state
+        all_complexes = self._load_complexes_interleaved(
+            state_codes=state_codes,
+            district_codes=district_codes,
+            complex_codes=complex_codes,
         )
 
-        with self.archive_manager:
-            # Build flat list of all complexes from courts.csv, interleaved by state
-            all_complexes = self._load_complexes_interleaved(
-                state_codes=state_codes,
-                district_codes=district_codes,
-                complex_codes=complex_codes,
-            )
+        if not all_complexes:
+            logger.error("No complexes to process")
+            return self.stats
 
-            if not all_complexes:
-                logger.error("No complexes to process")
+        logger.info(
+            f"Loaded {len(all_complexes)} complexes (interleaved across states), "
+            f"parallel_complexes={self.parallel_complexes}"
+        )
+
+        # In parallel mode, get the shared JWT upfront. If it fails, exit so
+        # run_scraper.sh restarts cleanly (avoids cycling through all complexes with no auth).
+        if self.parallel_complexes > 1:
+            jwt = self._get_shared_jwt()
+            if not jwt:
+                logger.error("Cannot start parallel scraping: shared session init failed. Will retry on next restart.")
                 return self.stats
 
-            logger.info(f"Loaded {len(all_complexes)} complexes (interleaved across states)")
+        pbar = tqdm(
+            total=len(all_complexes),
+            desc="Complexes",
+            unit="complex",
+            position=0,
+            leave=True,
+            ncols=100,
+        )
 
-            pbar = tqdm(
-                all_complexes,
-                desc="Complexes",
-                unit="complex",
-                position=0,
-                leave=True,
-                ncols=100,
-            )
-
-            for state, district, complex_ in pbar:
+        if self.parallel_complexes <= 1:
+            # Sequential mode (original behavior)
+            for state, district, complex_ in all_complexes:
                 if self._interrupted:
                     logger.info("Stopping due to interrupt - finalizing archives...")
                     break
-
-                pbar.set_description(
-                    f"s={state.code} d={district.code} {complex_.name[:20]}"
+                self._scrape_complex_worker(
+                    state, district, complex_, years, pending_disposed, pbar
                 )
-                self._update_stats(complexes_processed=1)
+                pbar.update(1)
+        else:
+            # Parallel mode — N complexes at a time
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=self.parallel_complexes
+            ) as executor:
+                future_to_complex = {
+                    executor.submit(
+                        self._scrape_complex_worker,
+                        state, district, complex_, years, pending_disposed, pbar
+                    ): (state, district, complex_)
+                    for state, district, complex_ in all_complexes
+                }
 
-                try:
-                    self.scrape_complex(
-                        state=state,
-                        district=district,
-                        complex_=complex_,
-                        years=years,
-                        pending_disposed=pending_disposed,
-                    )
-                    self.archive_manager.flush_complex(
-                        state_code=str(state.code),
-                        district_code=str(district.code),
-                        complex_code=str(complex_.code),
-                    )
-                    total_calls = (
-                        self.stats["cases_processed"]
-                        + self.stats["cases_skipped"]
-                        + self.stats["api_failures"]
-                    )
-                    fail_pct = (
-                        f"{self.stats['api_failures'] / total_calls * 100:.0f}%"
-                        if total_calls > 0
-                        else "0%"
-                    )
-                    pbar.set_postfix(
-                        {
-                            "cases": self.stats["cases_processed"],
-                            "pdfs": self.stats["pdfs_downloaded"],
-                            "fail": fail_pct,
-                        }
-                    )
-                    self._log_periodic_status()
-                except Exception as e:
-                    logger.error(
-                        f"Error processing complex {complex_.name}: {e}"
-                    )
-                    self._update_stats(errors=1)
+                for future in concurrent.futures.as_completed(future_to_complex):
+                    state, district, complex_ = future_to_complex[future]
+                    try:
+                        future.result()
+                    except Exception as e:
+                        logger.error(f"Complex worker failed for {complex_.name}: {e}")
+                        self._update_stats(errors=1)
+                    finally:
+                        pbar.update(1)
 
-            pbar.close()
+                    if self._interrupted:
+                        logger.info("Stopping due to interrupt - cancelling remaining complexes...")
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        break
+
+        pbar.close()
 
         self.stats["end_time"] = datetime.now(IST).isoformat()
 
@@ -975,6 +1128,12 @@ def main():
         action="store_true",
         help="Disable PDF compression (Ghostscript)",
     )
+    parser.add_argument(
+        "--parallel-complexes",
+        type=int,
+        default=1,
+        help="Number of court complexes to scrape in parallel (default: 1)",
+    )
     args = parser.parse_args()
 
     scraper = MobileScraper(
@@ -987,6 +1146,7 @@ def main():
         download_pdfs=not args.no_pdfs,
         compress_pdfs=not args.no_compress,
     )
+    scraper.parallel_complexes = args.parallel_complexes
 
     stats = scraper.scrape(
         state_codes=args.states,

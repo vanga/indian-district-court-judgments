@@ -674,6 +674,11 @@ class MobileScraper(ScraperBase):
             )
             checkpoint.load()
 
+            # Skip complexes previously confirmed to have no case types
+            _NO_CASE_TYPES_KEY = "__no_case_types__/0/"
+            if _NO_CASE_TYPES_KEY in checkpoint._data:
+                return 0
+
             # Get (or reuse) the per-thread client for this complex worker.
             # In parallel mode: 5 threads → 5 sessions, reused across all complexes on that thread.
             # In sequential mode: creates a fresh client per complex (original behavior).
@@ -701,8 +706,16 @@ class MobileScraper(ScraperBase):
                 court_code=complex_.njdg_est_code,
             )
 
-            if not case_types:
+            if case_types is None:
+                # API failure after retries — do not checkpoint, retry next run
                 logger.warning(f"No case types found for {complex_.name} (state={state.code} district={district.code})")
+                return 0
+
+            if not case_types:
+                # API confirmed empty — checkpoint so we don't re-attempt
+                logger.warning(f"No case types found for {complex_.name} (state={state.code} district={district.code}), checkpointing")
+                checkpoint.record("__no_case_types__", 0, "")
+                checkpoint.flush()
                 return 0
 
             # Generate tasks grouped by year
@@ -878,6 +891,13 @@ class MobileScraper(ScraperBase):
                     district_code=dc,
                 )
                 by_state[sc].append((state, district, complex_))
+
+        # Sort each state's complexes by court count descending (more courts = larger complex)
+        for sc in by_state:
+            by_state[sc].sort(
+                key=lambda t: len(t[2].njdg_est_code.split(",")) if t[2].njdg_est_code else 0,
+                reverse=True,
+            )
 
         # Interleave: round-robin across states
         result = []

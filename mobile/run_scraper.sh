@@ -38,7 +38,7 @@ while true; do
   rotate_log
   echo "$(date '+%Y-%m-%d %H:%M:%S') - Starting scraper..." >> "$LOG_FILE"
 
-  uv run python scraper.py --no-pdfs 2>&1 | tee -a "$LOG_FILE" &
+  uv run python scraper.py --no-pdfs --parallel-complexes 5 2>&1 | tee -a "$LOG_FILE" &
   SCRAPER_PID=$!
   echo "$SCRAPER_PID" > "$PID_FILE"
 

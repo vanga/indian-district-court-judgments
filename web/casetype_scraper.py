@@ -160,6 +160,10 @@ def _build_metadata(
             "case_status": case_status,
             "court_code": row.get("court_code", ""),
             "establishment_name": row.get("establishment_name"),
+            # Phase 2 enrichment needs these to call viewHistory (CAPTCHA-free)
+            "internal_case_no": row.get("internal_case_no", ""),
+            "search_flag": row.get("search_flag", "CScaseType"),
+            "hideparty": row.get("hideparty", ""),
         },
         "location": {
             "state_code": court.state_code,

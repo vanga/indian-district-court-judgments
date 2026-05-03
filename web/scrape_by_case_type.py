@@ -145,19 +145,23 @@ def parse_case_rows(case_data_html: str) -> Tuple[Optional[int], List[Dict]]:
         link = tr.find("a", onclick=True)
         onclick = link.get("onclick", "") if link else ""
 
-        # viewHistory(case_id, CNR, court_no, '', flag, state, dist, complex, source_tab)
+        # viewHistory(case_id, CNR, court_no, hideparty, search_flag, state, dist, complex, search_by)
         cnr = ""
         internal_case_no = ""
         court_code = ""
+        hideparty = ""
+        search_flag = ""
         m = re.search(
-            r"viewHistory\s*\(\s*(\d+)\s*,\s*'([^']+)'\s*,\s*(\d+)\s*,\s*'[^']*'\s*,"
-            r"\s*'[^']+'\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*'[^']+'\s*\)",
+            r"viewHistory\s*\(\s*(\d+)\s*,\s*'([^']+)'\s*,\s*(\d+)\s*,\s*'([^']*)'\s*,"
+            r"\s*'([^']+)'\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*'([^']+)'\s*\)",
             onclick,
         )
         if m:
             internal_case_no = m.group(1)
             cnr = m.group(2)
             court_code = m.group(3)
+            hideparty = m.group(4)
+            search_flag = m.group(5)
 
         sr_no = cells[0].get_text(strip=True)
         case_number = cells[1].get_text(strip=True)
@@ -180,6 +184,8 @@ def parse_case_rows(case_data_html: str) -> Tuple[Optional[int], List[Dict]]:
                 "cnr": cnr,
                 "internal_case_no": internal_case_no,
                 "court_code": court_code,
+                "hideparty": hideparty,
+                "search_flag": search_flag,
                 "establishment_name": current_establishment,
                 "establishment_id": current_est_id,
                 "raw_row_html": str(tr),

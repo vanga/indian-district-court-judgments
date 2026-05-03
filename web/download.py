@@ -41,8 +41,9 @@ from PIL import Image
 from requests.exceptions import ConnectionError, Timeout, ChunkedEncodingError
 from tqdm import tqdm
 
-# Add src to path for imports
+# Add src and repo root to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from archive_manager import S3ArchiveManager
 from src.captcha_solver.main import get_text
@@ -292,7 +293,8 @@ class Downloader:
                 self.app_token = token_match.group(1)
 
         if not self.app_token:
-            raise ValueError("Could not extract app_token from page")
+            self.app_token = ""
+            logger.debug("app_token empty in page HTML, proceeding with session cookies only")
 
         # Get session cookies
         self.session_cookie = response.cookies.get("SERVICES_SESSID")
@@ -1477,7 +1479,7 @@ def main():
     parser.add_argument(
         "--courts_csv",
         type=str,
-        default="courts.csv",
+        default=str(Path(__file__).parent.parent / "courts.csv"),
         help="Path to courts.csv file",
     )
     parser.add_argument(

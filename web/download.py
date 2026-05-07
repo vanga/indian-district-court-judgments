@@ -790,11 +790,12 @@ class Downloader:
 
         # Helper to extract text from table cells
         def get_cell_value(label: str) -> Optional[str]:
-            """Find a label and return the next cell's value"""
-            for td in soup.find_all("td"):
-                text = td.get_text(strip=True)
+            """Find a label in th or td and return the adjacent td value."""
+            for cell in soup.find_all(["th", "td"]):
+                text = cell.get_text(strip=True)
                 if label.lower() in text.lower():
-                    next_td = td.find_next_sibling("td")
+                    # Look for next td sibling (works for both th→td and td→td layouts)
+                    next_td = cell.find_next_sibling("td")
                     if next_td:
                         return next_td.get_text(strip=True)
             return None

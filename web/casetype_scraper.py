@@ -143,28 +143,41 @@ def _build_metadata(
     case_status: str,
     year: int,
     court: CourtComplex,
+    details: Optional[Dict] = None,
 ) -> Dict:
-    """Build a metadata record compatible with the mobile scraper schema."""
+    """Build a metadata record. Merges viewHistory details if provided."""
     cnr = row.get("cnr", "")
-    return {
-        "case_summary": {
-            "case_no": cnr,
-            "cino": cnr,
-            "case_number": row.get("case_number", ""),
-            "case_type": case_type_label,
-            "case_type_code": case_type_code,
-            "reg_year": year,
-            "petitioner": row.get("petitioner", ""),
-            "respondent": row.get("respondent", ""),
-            "parties": row.get("parties", ""),
-            "case_status": case_status,
-            "court_code": row.get("court_code", ""),
-            "establishment_name": row.get("establishment_name"),
-            # Phase 2 enrichment needs these to call viewHistory (CAPTCHA-free)
-            "internal_case_no": row.get("internal_case_no", ""),
-            "search_flag": row.get("search_flag", "CScaseType"),
-            "hideparty": row.get("hideparty", ""),
-        },
+    cs: Dict = {
+        "case_no": cnr,
+        "cino": cnr,
+        "case_number": row.get("case_number", ""),
+        "case_type": case_type_label,
+        "case_type_code": case_type_code,
+        "reg_year": year,
+        "petitioner": row.get("petitioner", ""),
+        "respondent": row.get("respondent", ""),
+        "parties": row.get("parties", ""),
+        "case_status": case_status,
+        "court_code": row.get("court_code", ""),
+        "establishment_name": row.get("establishment_name"),
+        "internal_case_no": row.get("internal_case_no", ""),
+        "search_flag": row.get("search_flag", "CScaseType"),
+        "hideparty": row.get("hideparty", ""),
+    }
+    if details:
+        for field in (
+            "case_type_full", "filing_number", "filing_date",
+            "registration_number", "registration_date",
+            "first_hearing_date", "next_hearing_date",
+            "case_stage", "court_number_and_judge",
+            "petitioners_with_advocates", "respondents_with_advocates",
+        ):
+            if details.get(field):
+                cs[field] = details[field]
+
+    now = datetime.now(IST).isoformat()
+    record: Dict = {
+        "case_summary": cs,
         "location": {
             "state_code": court.state_code,
             "state_name": court.state_name,
@@ -173,16 +186,19 @@ def _build_metadata(
             "complex_code": court.complex_code,
             "complex_name": court.complex_name,
         },
-        # Phase 2 enrichment will populate these via viewHistory (CAPTCHA-free)
-        "orders": {
-            "final_orders": [],
-            "interim_orders": [],
-            "has_pdf": False,
-        },
-        "history": None,
-        "scraped_at": datetime.now(IST).isoformat(),
+        "orders": {"final_orders": [], "interim_orders": [], "has_pdf": False},
+        "acts": details.get("acts") or [] if details else [],
+        "case_history": details.get("case_history") or [] if details else [],
+        "phase1_scraped_at": now,
         "source": "web_casetype",
     }
+    if details is not None:
+        record["phase2_scraped_at"] = now
+        has_content = bool(details.get("case_history") or details.get("acts"))
+        record["phase2_status"] = "enriched" if has_content else "no_data"
+    else:
+        record["phase2_status"] = "skipped"
+    return record
 
 
 # ─── Per-complex worker ───────────────────────────────────────────────────────
@@ -290,7 +306,27 @@ def _process_complex(
                     cnr = row.get("cnr")
                     if not cnr:
                         continue
-                    metadata = _build_metadata(row, code, label_ct, status, year, court)
+
+                    details = None
+                    if not args.skip_viewhistory:
+                        case_info = {
+                            "internal_case_no": row.get("internal_case_no", ""),
+                            "cino": cnr,
+                            "court_code": row.get("court_code", ""),
+                            "hideparty": row.get("hideparty", ""),
+                            "search_flag": row.get("search_flag", "CScaseType"),
+                            "state_code": court.state_code,
+                            "dist_code": court.district_code,
+                            "court_complex_code": court.complex_code,
+                            "search_by": row.get("search_flag", "CScaseType"),
+                        }
+                        vh_html = d.view_case_history(case_info)
+                        queries_since_init += 1
+                        if vh_html:
+                            details = d.parse_case_details(vh_html)
+                        time.sleep(0.05)
+
+                    metadata = _build_metadata(row, code, label_ct, status, year, court, details)
                     archive_manager.add_to_archive(
                         year=year,
                         state_code=court.state_code,
@@ -347,8 +383,8 @@ def main() -> None:
         help=f"First year to scrape (default: {START_YEAR})"
     )
     parser.add_argument(
-        "--max_workers", type=int, default=2,
-        help="Parallel court complexes (default: 2)"
+        "--max_workers", type=int, default=4,
+        help="Parallel court complexes (default: 4)"
     )
     parser.add_argument(
         "--courts_csv", default="courts.csv",
@@ -363,6 +399,10 @@ def main() -> None:
     parser.add_argument(
         "--local_only", action="store_true",
         help="Skip S3 uploads (data stays in local_casetype_data/)"
+    )
+    parser.add_argument(
+        "--skip_viewhistory", action="store_true",
+        help="Skip inline viewHistory calls — Phase 1 only (faster, sparse records)"
     )
     parser.add_argument("--log_level", default="INFO")
     args = parser.parse_args()

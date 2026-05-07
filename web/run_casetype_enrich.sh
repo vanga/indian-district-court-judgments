@@ -1,13 +1,14 @@
 #!/bin/bash
-# Phase 2+3 enrichment wrapper — CAPTCHA-free viewHistory + PDF download.
+# Phase 2 enrichment wrapper — CAPTCHA-free viewHistory enrichment.
 # Start with: tmux new-session -d -s web-enrich 'web/run_casetype_enrich.sh'
 #
 # Runs at 8 workers (no CAPTCHA bottleneck). Safe to run alongside Phase 1.
+# Writes to local_casetype_enriched/ (separate from local_casetype_data/).
 #
 # Usage:
 #   web/run_casetype_enrich.sh                        # all courts with local data
 #   web/run_casetype_enrich.sh --state_code 29        # Telangana only
-#   web/run_casetype_enrich.sh --metadata_only        # enrich without downloading PDFs
+#   web/run_casetype_enrich.sh --local_only           # skip S3 uploads
 
 LOG_FILE="${HOME}/web_enrich.log"
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"  # repo root
@@ -48,6 +49,5 @@ while true; do
   EXIT_CODE=${PIPESTATUS[0]}
 
   echo "$(date '+%Y-%m-%d %H:%M:%S') - Enrichment pass done (code $EXIT_CODE), restarting in 60s..." >> "$LOG_FILE"
-  # Longer sleep — if there's nothing to enrich yet, wait for Phase 1 to produce data
   sleep 60
 done

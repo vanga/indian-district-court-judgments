@@ -41,7 +41,7 @@ while true; do
   echo "$(date '+%Y-%m-%d %H:%M:%S') - Starting case-type scraper..." >> "$LOG_FILE"
 
   uv run --python 3.13 python web/casetype_scraper.py \
-    --max_workers 2 \
+    --max_workers 4 \
     --courts_csv courts.csv \
     $EXTRA_ARGS \
     2>&1 | tee -a "$LOG_FILE"

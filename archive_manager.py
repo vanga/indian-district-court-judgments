@@ -302,8 +302,9 @@ class S3ArchiveManager:
 
         if archive_type == "metadata":
             return f"metadata/tar/{base_path}/"
+        elif archive_type == "enriched":
+            return f"enriched/tar/{base_path}/"
         else:
-            # Orders archive
             return f"data/tar/{base_path}/"
 
     def _get_local_dir(
@@ -1091,6 +1092,8 @@ class S3ArchiveManager:
                 self._finalize_current_part(yr, sc, dc, cc, archive_type, upload=False)
             else:
                 self._finalize_current_part(yr, sc, dc, cc, archive_type, upload=True)
+                # Upload immediately — don't wait until process exit
+                self._upload_parts_for_key(yr, sc, dc, cc, archive_type)
             flushed_count += 1
 
         if flushed_count > 0:

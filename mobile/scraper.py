@@ -336,16 +336,42 @@ class MobileScraper(ScraperBase):
                     data["pdf_filename"] = filename
             return data
 
+        now = datetime.now(IST).isoformat()
+        h = history or {}
+
+        # Map raw history fields → normalised case_summary fields
+        def _hval(key: str):
+            v = h.get(key)
+            return v if v and v not in ("None", "0", "") else None
+
+        court_no = _hval("court_no") or _hval("courtno") or ""
+        judge = _hval("desgname") or ""
+        court_and_judge = f"{court_no} {judge}".strip() or None
+
+        case_summary = {
+            "case_no": case.case_no,
+            "cino": case.cino,
+            "case_type": case.case_type,
+            "case_number": case.case_number,
+            "reg_year": case.reg_year,
+            "petitioner": case.petitioner,
+            "court_code": case.court_code,
+            # Phase-2 equivalent fields from history
+            "filing_date": _hval("date_of_filing"),
+            "registration_date": _hval("dt_regis"),
+            "first_hearing_date": _hval("date_first_list"),
+            "next_hearing_date": _hval("date_next_list"),
+            "court_number_and_judge": court_and_judge,
+            "petitioners_with_advocates": _hval("petNameAdd"),
+            "respondents_with_advocates": _hval("resNameAdd"),
+        }
+        # Drop None values to keep records lean
+        case_summary = {k: v for k, v in case_summary.items() if v is not None}
+
+        has_data = bool(_hval("date_of_filing") or _hval("historyOfCaseHearing"))
+
         return {
-            "case_summary": {
-                "case_no": case.case_no,
-                "cino": case.cino,
-                "case_type": case.case_type,
-                "case_number": case.case_number,
-                "reg_year": case.reg_year,
-                "petitioner": case.petitioner,
-                "court_code": case.court_code,
-            },
+            "case_summary": case_summary,
             "location": {
                 "state_code": state.code,
                 "state_name": state.name,
@@ -359,8 +385,12 @@ class MobileScraper(ScraperBase):
                 "interim_orders": [order_to_dict(o) for o in interim_orders],
                 "has_pdf": bool(final_orders or interim_orders),
             },
-            "history": history,
-            "scraped_at": datetime.now(IST).isoformat(),
+            "history": history,       # raw API response preserved
+            "acts": [],               # structured acts not parsed from HTML
+            "case_history": [],       # structured history not parsed from HTML
+            "phase1_scraped_at": now,
+            "phase2_scraped_at": now, # mobile fetches everything in one pass
+            "phase2_status": "enriched" if has_data else "no_data",
             "source": "mobile_api",
         }
 

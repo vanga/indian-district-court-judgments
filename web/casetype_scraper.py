@@ -390,10 +390,13 @@ def main() -> None:
         "--courts_csv", default="courts.csv",
         help="Path to courts.csv (default: courts.csv)"
     )
-    parser.add_argument("--state_code", help="Restrict to one state code")
+    parser.add_argument(
+        "--state_code", action="append", dest="state_codes", metavar="STATE",
+        help="Restrict to state code(s) — can be repeated: --state_code 9 --state_code 11"
+    )
     parser.add_argument(
         "--district_code",
-        help="Restrict to one district code (requires --state_code)"
+        help="Restrict to one district code (requires a single --state_code)"
     )
     parser.add_argument("--complex_code", help="Restrict to one complex code")
     parser.add_argument(
@@ -413,13 +416,14 @@ def main() -> None:
 
     if args.complex_code:
         courts = [c for c in courts if c.complex_code == args.complex_code]
-    elif args.district_code and args.state_code:
+    elif args.district_code and args.state_codes and len(args.state_codes) == 1:
         courts = [
             c for c in courts
-            if c.state_code == args.state_code and c.district_code == args.district_code
+            if c.state_code == args.state_codes[0] and c.district_code == args.district_code
         ]
-    elif args.state_code:
-        courts = [c for c in courts if c.state_code == args.state_code]
+    elif args.state_codes:
+        state_set = set(args.state_codes)
+        courts = [c for c in courts if c.state_code in state_set]
 
     if not courts:
         logger.error("No courts matched the given filters")

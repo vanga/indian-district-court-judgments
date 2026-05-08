@@ -180,6 +180,8 @@ cython_debug/
 
 # Project-specific
 local_dc_judgments_data/
+local_casetype_data/
+local_casetype_enriched/
 captcha-tmp/
 captcha-failures/
 packages/
@@ -188,6 +190,9 @@ dc_fill_track.json
 dc_sync_track.json
 dc_completed_tasks.json
 run.txt
+
+# Claude Code operator state
+.claude/scheduled_tasks.lock
 
 # Serena
 .serena/
